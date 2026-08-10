@@ -2,1059 +2,2533 @@
 <html lang="sr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Анализа сондирања – Прогноза суперћелија + град</title>
+    <title>Prikaz sektora – A-B presjek (PP8, PP8X, TD6B, TD6BX)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #1a1e2b; color: #e0e4ef; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { max-width: 1100px; width: 100%; background: #252b3d; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
-        h1 { text-align: center; font-weight: 300; letter-spacing: 1px; margin-top: 0; border-bottom: 2px solid #3e4a66; padding-bottom: 15px; color: #b8c7f0; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
-        h1 .run-badge { font-size: 14px; background: #4a6bb5; padding: 4px 18px; border-radius: 30px; font-weight: 600; color: #fff; letter-spacing: 0.5px; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
-        h1 .run-badge:hover { background: #5f82d4; transform: scale(1.04); box-shadow: 0 4px 12px rgba(74,107,181,0.4); }
-        .input-section { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
-        .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
-        .file-input-wrapper { background: #323a51; padding: 10px 16px; border-radius: 8px; border: 1px dashed #6b7ca1; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.2s; }
-        .file-input-wrapper:hover { background: #3c4662; border-color: #8ea4d4; }
-        textarea { width: 100%; height: 220px; background: #141824; color: #c8d0e6; border: 1px solid #3e4a66; border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; resize: vertical; line-height: 1.5; }
-        textarea:focus { outline: 2px solid #5b7abf; border-color: transparent; }
-        .btn { background: #4a6bb5; color: white; border: none; padding: 12px 28px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; letter-spacing: 0.5px; align-self: flex-start; }
-        .btn:hover { background: #5f82d4; transform: scale(1.02); box-shadow: 0 4px 12px rgba(74,107,181,0.5); }
-        .btn:active { transform: scale(0.98); }
-        .btn-run-large { background: #4a6bb5; padding: 14px 40px; font-size: 18px; align-self: center; width: 100%; max-width: 320px; }
-        .btn-run-large:hover { background: #5f82d4; }
-        .results { margin-top: 25px; display: none; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
-        .param-card { background: #1e2538; border-radius: 12px; padding: 14px 16px; border-left: 6px solid #4a6bb5; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-        .param-card .label { font-size: 12px; color: #9aa8c9; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-        .param-card .value { font-size: 26px; font-weight: 700; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
-        .param-card .threshold { font-size: 11px; color: #7e8bb0; margin-top: 6px; border-top: 1px solid #2e3650; padding-top: 6px; line-height: 1.4; }
-        .good { color: #6fcf97; border-left-color: #6fcf97; }
-        .bad { color: #f28b82; border-left-color: #f28b82; }
-        .medium { color: #f9ca7f; border-left-color: #f9ca7f; }
-        .neutral { border-left-color: #8a9bb5; }
-        .bunkers-box { background: #1e2538; border-radius: 12px; padding: 18px 22px; margin-top: 15px; display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-around; }
-        .bunkers-item { display: flex; flex-direction: column; align-items: center; }
-        .bunkers-item .dir { font-size: 22px; font-weight: 600; }
-        .bunkers-item .speed { font-size: 18px; color: #b0bedd; }
-        .scp-indicator { background: #111724; border-radius: 40px; padding: 16px 30px; text-align: center; margin-top: 20px; }
-        .scp-indicator .scp-value { font-size: 32px; font-weight: 700; }
-        .hail-block { background: #1a2236; border-radius: 20px; padding: 20px 30px; margin-top: 20px; text-align: center; border: 2px solid #4a6bb5; }
-        .hail-block .hail-percent { font-size: 48px; font-weight: 800; margin: 6px 0; }
-        .hail-block .hail-desc { font-size: 18px; font-weight: 500; }
-        .hail-block .hail-detail { font-size: 14px; color: #9aa8c9; margin-top: 8px; }
-        .footnote { margin-top: 20px; font-size: 13px; color: #7e8bb0; text-align: center; border-top: 1px solid #2e3650; padding-top: 20px; }
-        .error-msg { color: #f28b82; background: #2a1f24; padding: 12px; border-radius: 8px; border-left: 4px solid #f28b82; margin-top: 10px; display: none; }
-        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-        .status-dot.good { background: #6fcf97; }
-        .status-dot.medium { background: #f9ca7f; }
-        .status-dot.bad { background: #f28b82; }
-        .status-dot.neutral { background: #8a9bb5; }
-        .param-card .label .status-dot { vertical-align: middle; }
-        .cb-type-card { border-left-color: #b8a5e0; background: #1e2538; }
-        .cb-type-card .value { font-size: 22px; font-weight: 700; }
-        @media (max-width: 600px) { .container { padding: 16px; } .param-grid { grid-template-columns: 1fr 1fr; } .hail-block .hail-percent { font-size: 36px; } .btn-run-large { max-width: 100%; } h1 .run-badge { font-size: 12px; padding: 3px 12px; } }
-        @media (max-width: 420px) { .param-grid { grid-template-columns: 1fr; } }
-        .star-rating { color: #f9ca7f; font-size: 11px; letter-spacing: 1px; }
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: sans-serif;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            cursor: crosshair;
+            transition: filter 0.3s ease;
+        }
+        #map.enhanced {
+            filter: contrast(1.25) brightness(1.08) saturate(1.15);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 90px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 2px 5px;
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            font-size: 4.8px;
+            line-height: 1.15;
+            pointer-events: none;
+            max-width: 200px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0.5px 0;
+        }
+        .legend-color {
+            width: 8px;
+            height: 3.5px;
+            margin-right: 2px;
+            border: 0.3px solid #888;
+            flex-shrink: 0;
+        }
+        .legend-pin {
+            display: inline-block;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #cc0000;
+            border: 0.5px solid #fff;
+            margin-right: 2px;
+            flex-shrink: 0;
+        }
+        .legend-b {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #0066cc;
+            border: 1px solid #fff;
+            margin-right: 2px;
+            flex-shrink: 0;
+        }
+        .legend-a-selected {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #ffcc00;
+            border: 1px solid #ff0000;
+            margin-right: 2px;
+            flex-shrink: 0;
+        }
+        .legend-dbz {
+            display: inline-block;
+            width: 8px;
+            height: 3px;
+            margin-right: 2px;
+            border: 0.2px solid #555;
+            flex-shrink: 0;
+        }
+        .legend-separator {
+            width: 100%;
+            height: 1px;
+            background: #aaa;
+            margin: 1px 0;
+        }
+
+        .custom-control {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 6px 4px 8px;
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            align-items: center;
+            width: auto;
+        }
+        .custom-control button,
+        .custom-control .dropdown-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #888;
+            border-radius: 4px;
+            background: #fff;
+            color: #333;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 28px;
+            text-align: center;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        #pp8DropdownBtn,
+        #pp8xDropdownBtn,
+        #td6bDropdownBtn,
+        #td6bxDropdownBtn {
+            font-size: 10px;
+        }
+        .custom-control button:hover {
+            background: #f0f0f0;
+        }
+        .custom-control button.active {
+            background: #007bff;
+            color: #fff;
+            border-color: #007bff;
+        }
+        .custom-control button.radar-on {
+            background: #28a745;
+            color: #fff;
+            border-color: #28a745;
+        }
+        .custom-control button.radar-off {
+            background: #dc3545;
+            color: #fff;
+            border-color: #dc3545;
+        }
+        .custom-control button.sectors-on {
+            background: #17a2b8;
+            color: #fff;
+            border-color: #17a2b8;
+        }
+        .custom-control button.sectors-off {
+            background: #6c757d;
+            color: #fff;
+            border-color: #6c757d;
+        }
+        .custom-control button.delete-mode {
+            background: #ff9800;
+            color: #fff;
+            border-color: #ff9800;
+        }
+        .custom-control button.map-on {
+            background: #007bff;
+            color: #fff;
+            border-color: #007bff;
+        }
+        .custom-control button.map-off {
+            background: #6c757d;
+            color: #fff;
+            border-color: #6c757d;
+        }
+        .custom-control button.topo-on {
+            background: #228B22;
+            color: #fff;
+            border-color: #228B22;
+        }
+        .custom-control button.topo-off {
+            background: #6c757d;
+            color: #fff;
+            border-color: #6c757d;
+        }
+        .custom-control button.enhance-on {
+            background: #9b59b6;
+            color: #fff;
+            border-color: #9b59b6;
+        }
+        .custom-control button.enhance-off {
+            background: #6c757d;
+            color: #fff;
+            border-color: #6c757d;
+        }
+        .custom-control button.firebase-on {
+            background: #f57c00;
+            color: #fff;
+            border-color: #f57c00;
+        }
+        .custom-control button.firebase-off {
+            background: #6c757d;
+            color: #fff;
+            border-color: #6c757d;
+        }
+        .custom-control .separator {
+            width: 70%;
+            height: 1px;
+            background: #ccc;
+            margin: 2px 0;
+        }
+        .custom-control input[type="file"] {
+            display: none;
+        }
+
+        .dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 40px;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+            border-radius: 4px;
+            overflow: hidden;
+            left: 30px;
+            top: 0;
+            bottom: auto;
+        }
+        .dropdown-content button {
+            width: 100%;
+            height: 28px;
+            border: none;
+            background: #fff;
+            color: #333;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 28px;
+            text-align: center;
+            padding: 0;
+        }
+        .dropdown-content button:hover {
+            background: #ddd;
+        }
+        .show-dropdown {
+            display: block;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.85);
+            padding: 2px 12px;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            font-size: 10px;
+            pointer-events: none;
+            text-align: center;
+        }
+        #mouse-azimuth {
+            position: absolute;
+            bottom: 60px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-family: monospace;
+            line-height: 1.4;
+            min-width: 220px;
+            text-align: left;
+        }
+        .status {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+
+        #hoverTooltip {
+            position: absolute;
+            display: none;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 10000;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #tableOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        #tableContainer {
+            background: #fff;
+            max-width: 90%;
+            max-height: 80%;
+            width: 90%;
+            padding: 20px;
+            border-radius: 8px;
+            overflow: auto;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        #tableContainer table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        #tableContainer th,
+        #tableContainer td {
+            border: 1px solid #ccc;
+            padding: 4px 6px;
+            text-align: left;
+        }
+        #tableContainer th {
+            background: #f0f0f0;
+            position: sticky;
+            top: 0;
+        }
+        .close-table {
+            float: right;
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 12px;
+            cursor: pointer;
+        }
+        .close-table:hover {
+            background: #c82333;
+        }
+
+        #firebaseStatus {
+            position: absolute;
+            bottom: 165px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #4fc3f7;
+            padding: 3px 12px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 1000;
+            pointer-events: none;
+            font-family: monospace;
+            display: none;
+            max-width: 300px;
+            text-align: right;
+            line-height: 1.5;
+        }
+        #firebaseStatus.connected {
+            color: #81c784;
+        }
+        #firebaseStatus.error {
+            color: #ef9a9a;
+        }
+
+        @media (max-width: 600px) {
+            .custom-control {
+                left: 10px;
+                padding: 3px 4px 3px 6px;
+                gap: 2px;
+            }
+            .custom-control button,
+            .custom-control .dropdown-btn {
+                width: 24px;
+                height: 24px;
+                font-size: 11px;
+                line-height: 24px;
+            }
+            #pp8DropdownBtn,
+            #pp8xDropdownBtn,
+            #td6bDropdownBtn,
+            #td6bxDropdownBtn {
+                font-size: 9px;
+            }
+            .dropdown-content {
+                left: 26px;
+                min-width: 34px;
+            }
+            .legend {
+                bottom: 40px;
+                left: 60px;
+                font-size: 4.5px;
+                padding: 1px 3px;
+                max-width: 160px;
+            }
+            #info {
+                font-size: 9px;
+                bottom: 10px;
+            }
+            #mouse-azimuth {
+                font-size: 11px;
+                padding: 2px 8px;
+                bottom: 50px;
+                right: 10px;
+                min-width: 140px;
+            }
+            #tableContainer {
+                padding: 10px;
+                max-width: 98%;
+            }
+            #tableContainer table {
+                font-size: 10px;
+            }
+            #firebaseStatus {
+                bottom: 140px;
+                right: 10px;
+                font-size: 9px;
+                max-width: 200px;
+            }
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>
-        ⚡ Анализа емаграма – суперћелије + град
-        <span class="run-badge" onclick="analyze()">▶ RUN</span>
-    </h1>
+    <div id="map"></div>
+    <div id="hoverTooltip"></div>
 
-    <div class="input-section">
-        <div class="input-row">
-            <div class="file-input-wrapper" onclick="document.getElementById('fileInput').click();">
-                📂 Учитај фајл
-                <input type="file" id="fileInput" accept=".txt,.dat,.profile" style="display:none;" onchange="loadFile(event)">
+    <div class="custom-control" id="customControl">
+        <button class="active" data-filter="all">S</button>
+        <button data-filter="pp8">8</button>
+        <button data-filter="pp6">6</button>
+        <span class="separator"></span>
+        <button id="toggleMapBtn" class="map-on" title="Prikaži/sakrij geografsku mapu">🗺️</button>
+        <button id="toggleTopoBtn" class="topo-off" title="Prikaži/sakrij topografsku mapu (OpenTopoMap) sa izohipsama">🗻</button>
+        <span class="separator"></span>
+        <button id="radarToggle" class="radar-off">🖼️</button>
+        <span class="separator"></span>
+        <button id="loadKmzBtn" title="Učitaj KMZ (PNG)">📁</button>
+        <input type="file" id="fileInput" accept=".kmz" />
+        <span class="separator"></span>
+        <button id="selectFolderBtn" title="Odaberi folder sa PNG-om">📂</button>
+        <input type="file" id="folderInput" webkitdirectory style="display:none;" />
+        <span class="separator"></span>
+
+        <!-- Enhance dugme -->
+        <button id="enhanceBtn" class="enhance-off" title="Uključi/isključi kontrast i pojačanje boja">✨</button>
+        <!-- Firebase dugme -->
+        <button id="firebaseBtn" class="firebase-off" title="Uključi/isključi Firebase sinhronizaciju">🔥</button>
+
+        <span class="separator"></span>
+        <button id="showTableBtn" title="Prikaži tabelu A-B">📊</button>
+        <button id="exportExcelBtn" title="Sačuvaj kao Excel">💾</button>
+        <button id="clearBbtn" title="Obriši sve tačke B">🗑️</button>
+        <button id="deleteSelectedB" title="Obriši odabranu tačku B (klik na marker)">❌B</button>
+        <button id="clearABtn" title="Poništi izbor A">❌A</button>
+        <span class="separator"></span>
+        <button id="toggleSectorsBtn" class="sectors-on" title="Prikaži/sakrij sektore">📐</button>
+        <span class="separator"></span>
+
+        <div class="dropdown-container" id="pp8DropdownContainer">
+            <button id="pp8DropdownBtn" class="dropdown-btn" title="Odaberi PP8 sektor (0-4)">P8</button>
+            <div id="pp8DropdownContent" class="dropdown-content">
+                <button data-value="0">0</button>
+                <button data-value="1">1</button>
+                <button data-value="2">2</button>
+                <button data-value="3">3</button>
+                <button data-value="4">4</button>
             </div>
-            <span style="color:#7e8bb0;">или налепи податке испод</span>
         </div>
-        <textarea id="soundingData" placeholder="Овде налепите садржај .profile или .txt фајла...">File start time : 26  7 22 12  0
-File ending time: 26  8  1 12  0
-Chosen date in meteorological file:           26           7          22          12
 
-YR: 2026   MON: 07   DAY: 22   HOUR: 12    AT POSITION:  18.0 136.0  LAT.: 45.00  LON.:  17.00
-PRSS:    0.9804E+03
-MSLP:    0.1018E+04
-TPP6:    0.4883E-03
-UMOF:    0.8966E-02
-VMOF:    0.1900E+00
-SHTF:    0.2696E+03
-DSWF:    0.7040E+03
-RH2M:    0.3000E+02
-U10M:    0.3455E+00
-V10M:   -0.2616E+01
-T02M:    0.2974E+03
-TCLD:    0.6870E+02
-SHGT:    0.3434E+03
-CAPE:    0.3200E+02
-CINH:    0.0000E+00
-LISD:    0.2780E+03
-LIB4:    0.5450E+01
-PBLH:    0.2829E+04
+        <div class="dropdown-container" id="pp8xDropdownContainer">
+            <button id="pp8xDropdownBtn" class="dropdown-btn" title="Odaberi PP8X sektor (0-4)">PX</button>
+            <div id="pp8xDropdownContent" class="dropdown-content">
+                <button data-value="0">0</button>
+                <button data-value="1">1</button>
+                <button data-value="2">2</button>
+                <button data-value="3">3</button>
+                <button data-value="4">4</button>
+            </div>
+        </div>
 
-PRESS HGT(MSL) TEMP DEW PT  WND DIR  WND SPD
-HPA       M      C     C       DEG     M/S
-E = Estimated Surface Height
+        <div class="dropdown-container" id="td6bDropdownContainer">
+            <button id="td6bDropdownBtn" class="dropdown-btn" title="Odaberi TD6B sektor (0-4)">T6</button>
+            <div id="td6bDropdownContent" class="dropdown-content">
+                <button data-value="0">0</button>
+                <button data-value="1">1</button>
+                <button data-value="2">2</button>
+                <button data-value="3">3</button>
+                <button data-value="4">4</button>
+            </div>
+        </div>
 
-  980.   343.   24.2    5.6   352.5     2.6
-  975.   373.   22.6    4.5   354.4     3.4
-  950.   598.   20.0    4.0   355.7     4.4
-  925.   826.   17.8    3.6   356.1     4.9
-  900.  1059.   15.3    2.8     0.0     4.9
-  850.  1540.   10.8    2.1     0.0     4.9
-  800.  2040.    6.1    1.0     2.0     4.9
-  750.  2565.    1.1   -0.1     0.0     4.9
-  700.  3116.   -3.5   -4.1   351.2     5.5
-  650.  3700.   -3.9  -14.6   326.1     9.7
-  600.  4332.   -4.2  -42.7   321.0    12.1
-  550.  5012.   -8.6  -38.6   321.7    13.3
-  500.  5743.  -14.4  -38.1   318.9    13.2
-  450.  6530.  -20.7  -40.1   314.2    15.9
-  400.  7389.  -27.4  -46.1   317.8    17.9
-  350.  8335.  -34.8  -49.6   323.0    19.3
-  300.  9391.  -42.8  -54.4   321.1    22.7
-  250. 10615.  -43.9  -62.4   307.1    26.1
-  200. 12112.  -44.2  -74.7   284.3    27.7
-  150. 14011.  -50.8  -78.1   285.9    21.7
-  100. 16634.  -53.8  -85.8   260.1    14.4
-   70. 18907.  -55.3  -87.4   255.0     4.3
-   50. 21064.  -53.1  -87.4   102.8     3.9
-   40. 22502.  -52.5  -91.7   107.1     6.4
-   30. 24377.   21.4    4.4   354.9     3.9
-   20. 27064.  -44.6 -999.0    98.9    13.0
-   15. 29002.  -41.5 -999.0    96.1    13.4
-   10. 31781.  -35.8 -999.0    98.7    18.4
-    7. 34290.  -29.9 -999.0    94.0    19.8
-    5. 36704.  -26.3 -999.0   103.1    20.2
-    3. 40441.  -19.9 -999.0    86.9    20.5
-    2. 43492.  -11.3 -999.0    88.2    28.6
-    1. 48878.   22.0 -999.0   351.7     4.0
-    1. 51625.  -10.8 -999.0    94.6    41.3
-    0. 55902.  -15.2 -999.0   355.1     3.4
-    0. 60960.  -33.8 -999.0   353.8     3.1
-    0. 65682.  -45.8 -999.0   101.2    54.4
-    0. 68025.  -52.0 -999.0    95.4    56.7
-    0. 71552.  -65.6 -999.0    85.4    47.7
-    0. 75617.  -79.4 -999.0    64.5    73.0
-    0. 79358.  -93.2 -122.4    58.6    77.6</textarea>
-        <button class="btn btn-run-large" onclick="analyze()">🚀 Покрени анализу</button>
-        <div id="errorMsg" class="error-msg"></div>
+        <div class="dropdown-container" id="td6bxDropdownContainer">
+            <button id="td6bxDropdownBtn" class="dropdown-btn" title="Odaberi TD6BX sektor (0-4)">TX</button>
+            <div id="td6bxDropdownContent" class="dropdown-content">
+                <button data-value="0">0</button>
+                <button data-value="1">1</button>
+                <button data-value="2">2</button>
+                <button data-value="3">3</button>
+                <button data-value="4">4</button>
+            </div>
+        </div>
+
+        <span class="separator"></span>
+        <button id="gridGreen" title="Uključi/isključi zeleno bojenje okvira">🟩</button>
+        <button id="gridRed" title="Uključi/isključi crveno bojenje okvira">🟥</button>
+        <button id="gridReset" title="Vrati sve okvire na crno (zadržava izabranu boju)">⬛</button>
     </div>
 
-    <div id="resultsContainer" class="results">
-        <div id="paramGrid" class="param-grid"></div>
-
-        <div class="bunkers-box" id="bunkersBox">
-            <div class="bunkers-item"><span style="color:#7e8bb0;">Десни покретач</span><span class="dir" id="rightDir">--</span><span class="speed" id="rightSpeed">--</span></div>
-            <div class="bunkers-item"><span style="color:#7e8bb0;">Леви покретач</span><span class="dir" id="leftDir">--</span><span class="speed" id="leftSpeed">--</span></div>
-        </div>
-
-        <div class="scp-indicator">
-            <div style="color:#9aa8c9; font-size:14px;">Supercell Composite Parameter (SCP)</div>
-            <div class="scp-value" id="scpDisplay">--</div>
-            <div style="font-size:14px; color:#7e8bb0;" id="scpInterpretation"></div>
-        </div>
-
-        <div class="hail-block" id="hailBlock">
-            <div style="color:#9aa8c9; font-size:14px; letter-spacing:1px;">🌨️ ВЕРОВАТНОЋА ГРМЉАВИНСКОГ НЕВРЕМЕНА СА ГРАДОМ НА ТЛУ</div>
-            <div class="hail-percent" id="hailPercent">--</div>
-            <div class="hail-desc" id="hailDesc"></div>
-            <div class="hail-detail" id="hailDetail"></div>
-        </div>
-
-        <div class="footnote">Параметри су рангирани по важности (звездице). Вероватноћа града се рачуна као пондерисана сума бодова (0–100) за сваки параметар, при чему су тежине пропорционалне броју звездица. Скорови су прилагођени датим метеоролошким праговима. <span style="color:#b8a5e0;">💡 Тип Cb облака</span> се одређује на основу комбинације кључних параметара.</div>
+    <div class="legend">
+        <div class="legend-item"><span class="legend-color" style="background:rgba(255,0,0,0.1);border-color:#cc0000;"></span> PP8 4‑8 km</div>
+        <div class="legend-item"><span class="legend-color" style="background:rgba(0,0,255,0.1);border-color:#0000cc;"></span> PP6 2.25‑4.5 km</div>
+        <div class="legend-item"><span class="legend-pin"></span> A</div>
+        <div class="legend-item"><span class="legend-a-selected"></span> A aktivan</div>
+        <div class="legend-item"><span class="legend-b"></span> B</div>
+        <div class="legend-item" style="color:#d00;">Klik A=centar | klik mapa=B (samo u zelenim ćelijama)</div>
+        <div class="legend-separator"></div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">Levi klik ćelija → boji okvir (ako je boja aktivna)</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">Desni klik ćelija → vraća na crno</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">⬛ resetuje sve okvire, zadržava boju</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">Pređi mišem preko B → PP8/TD6B ispod azimuta</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">Nepotvrđena B → B$broj, potvrđena → B#broj</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">Sektori 90% providni (fillOpacity: 0.1)</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">Klik na A → samo njeni sektori</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">S/8/6/❌A → svi sektori</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">A markeri povećani 20%</div>
+        <div class="legend-separator"></div>
+        <div class="legend-item" style="color:#0a0; font-size:4.2px;">✅ B samo u zelenim ćelijama</div>
+        <div class="legend-item" style="color:#c00; font-size:4.2px;">⛔ B NE smije biti u sektoru A</div>
+        <div class="legend-item" style="color:#c00; font-size:4.2px;">⛔ A–B maks. 10 km</div>
+        <div class="legend-separator"></div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">ID: D10–U29 (Q → R)</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">🖼️ PNG radar → piksel koordinate</div>
+        <div class="legend-separator"></div>
+        <div class="legend-item" style="font-size:4.2px; font-weight:bold;">dBZ boje (KMZ):</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#0055ff;"></span> 20‑35</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#007800;"></span> 35‑40</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#ffff00;"></span> 40‑45</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#ff0000;"></span> 45‑47.5</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#e39700;"></span> 47.5‑50</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#ffaaff;"></span> 50‑55</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#ff00ff;"></span> 55‑60</div>
+        <div class="legend-item"><span class="legend-dbz" style="background:#ffffff; border-color:#999;"></span> 60‑65</div>
+        <div class="legend-separator"></div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">🖱️ Kvadrat ID se prikazuje u donjem desnom prozoru</div>
+        <div class="legend-item" style="color:#555; font-size:4.2px;">🗻 Topo mapa (OpenTopoMap) sa izohipsama</div>
+        <div class="legend-item" style="color:#9b59b6; font-size:4.2px;">✨ Enhance: kontrast +25%, svjetlina +8%, saturacija +15%</div>
+        <div class="legend-item" style="color:#f57c00; font-size:4.2px;">🔥 Firebase: automatska sinhronizacija tačaka B</div>
     </div>
-</div>
 
-<script>
-    // ====================== ОСНОВНЕ ФУНКЦИЈЕ ======================
-    function windToUV(dirDeg, speedMs) {
-        const rad = dirDeg * Math.PI / 180.0;
-        return { u: -speedMs * Math.sin(rad), v: -speedMs * Math.cos(rad) };
-    }
-    function uvToWind(u, v) {
-        const spd = Math.hypot(u, v);
-        if (spd < 1e-6) return { dir: 0, speed: 0 };
-        let dir = Math.atan2(-u, -v) * 180.0 / Math.PI;
-        if (dir < 0) dir += 360.0;
-        return { dir, speed: spd };
-    }
+    <div id="info">Sektora: <span id="count">0</span> | B: <span id="bCount">0</span> | Centar A: <span id="activeAName">-</span></div>
+    <div id="mouse-azimuth"></div>
+    <div id="status" class="status"></div>
+    <div id="firebaseStatus">🔥 Firebase: <span id="fbStatusText">isključen</span></div>
 
-    function parseData(text) {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        const meta = {};
-        const data = [];
-        let inData = false;
+    <div id="tableOverlay">
+        <div id="tableContainer">
+            <button class="close-table" id="closeTableBtn">✕ Zatvori</button>
+            <h3>Presjek A-B (PP8, PP8X, TD6B, TD6BX)</h3>
+            <div id="tableWrapper" style="max-height:70vh; overflow:auto;"></div>
+        </div>
+    </div>
 
-        for (let line of lines) {
-            if (line.includes('CAPE:')) {
-                const parts = line.split(/\s+/);
-                for (let i=0; i<parts.length; i++) {
-                    if (parts[i].toUpperCase().includes('CAPE') && i+1 < parts.length) {
-                        const val = parseFloat(parts[i+1].replace(',',''));
-                        if (!isNaN(val)) meta.CAPE = val;
-                    }
-                    if (parts[i].toUpperCase().includes('CINH') && i+1 < parts.length) {
-                        const val = parseFloat(parts[i+1].replace(',',''));
-                        if (!isNaN(val)) meta.CIN = val;
-                    }
-                    if (parts[i].toUpperCase().includes('LISD') && i+1 < parts.length) {
-                        const val = parseFloat(parts[i+1].replace(',',''));
-                        if (!isNaN(val)) meta.LISD = val;
-                    }
-                    if (parts[i].toUpperCase().includes('LIB4') && i+1 < parts.length) {
-                        const val = parseFloat(parts[i+1].replace(',',''));
-                        if (!isNaN(val)) meta.LIB4 = val;
-                    }
-                    if (parts[i].toUpperCase().includes('PBLH') && i+1 < parts.length) {
-                        const val = parseFloat(parts[i+1].replace(',',''));
-                        if (!isNaN(val)) meta.PBLH = val;
-                    }
-                    if (parts[i].toUpperCase().includes('RH2M') && i+1 < parts.length) {
-                        const val = parseFloat(parts[i+1].replace(',',''));
-                        if (!isNaN(val)) meta.RH2M = val;
-                    }
-                }
-            }
-            if (/PRESS\s+HGT/.test(line) && /TEMP/.test(line) && /DEW/.test(line)) {
-                inData = true;
-                continue;
-            }
-            if (inData) {
-                const parts = line.split(/\s+/);
-                if (parts.length < 6) continue;
-                const press = parseFloat(parts[0]);
-                const hgt = parseFloat(parts[1]);
-                const temp = parseFloat(parts[2]);
-                const dew = parseFloat(parts[3]);
-                const wdir = parseFloat(parts[4]);
-                const wspd = parseFloat(parts[5]);
-                if (isNaN(press) || isNaN(hgt) || isNaN(temp) || isNaN(dew) || isNaN(wdir) || isNaN(wspd)) continue;
-                if (press <= 0 || press > 1100) continue;
-                if (press < 100 && temp > 0) continue;
-                if (hgt < 0) continue;
-                const uv = windToUV(wdir, wspd);
-                data.push({ press, hgt, temp, dew, wdir, wspd, u: uv.u, v: uv.v });
-            }
-        }
-        data.sort((a,b) => a.hgt - b.hgt);
-        return { meta, data };
-    }
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js">
+    </script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js">
+    </script>
 
-    function interpolate(data, targetHgt) {
-        if (data.length === 0) return null;
-        if (targetHgt <= data[0].hgt) return { ...data[0] };
-        if (targetHgt >= data[data.length-1].hgt) return { ...data[data.length-1] };
-        for (let i=0; i<data.length-1; i++) {
-            const h1 = data[i].hgt, h2 = data[i+1].hgt;
-            if (targetHgt >= h1 && targetHgt <= h2) {
-                const frac = (targetHgt - h1) / (h2 - h1);
-                return {
-                    press: data[i].press + frac * (data[i+1].press - data[i].press),
-                    hgt: targetHgt,
-                    temp: data[i].temp + frac * (data[i+1].temp - data[i].temp),
-                    dew: data[i].dew + frac * (data[i+1].dew - data[i].dew),
-                    u: data[i].u + frac * (data[i+1].u - data[i].u),
-                    v: data[i].v + frac * (data[i+1].v - data[i].v),
-                    wdir: null, wspd: null
-                };
-            }
-        }
-        return { ...data[data.length-1] };
-    }
+    <!-- Firebase SDK (Realtime Database) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js">
+    </script>
 
-    function interpolatePressure(data, targetPress) {
-        if (data.length === 0) return null;
-        if (targetPress >= data[0].press) return { ...data[0] };
-        if (targetPress <= data[data.length-1].press) return { ...data[data.length-1] };
-        for (let i=0; i<data.length-1; i++) {
-            const p1 = data[i].press, p2 = data[i+1].press;
-            if (targetPress >= p2 && targetPress <= p1) {
-                const frac = (p1 - targetPress) / (p1 - p2);
-                return {
-                    press: targetPress,
-                    hgt: data[i].hgt + frac * (data[i+1].hgt - data[i].hgt),
-                    temp: data[i].temp + frac * (data[i+1].temp - data[i].temp),
-                    dew: data[i].dew + frac * (data[i+1].dew - data[i].dew),
-                    u: data[i].u + frac * (data[i+1].u - data[i].u),
-                    v: data[i].v + frac * (data[i+1].v - data[i].v),
-                    wdir: null, wspd: null
-                };
-            }
-        }
-        return { ...data[data.length-1] };
-    }
-
-    function findHeightForTemp(data, targetTemp) {
-        if (data.length < 2) return null;
-        for (let i=0; i<data.length-1; i++) {
-            const t1 = data[i].temp, t2 = data[i+1].temp;
-            const h1 = data[i].hgt, h2 = data[i+1].hgt;
-            if ((t1 <= targetTemp && t2 >= targetTemp) || (t1 >= targetTemp && t2 <= targetTemp)) {
-                const frac = (targetTemp - t1) / (t2 - t1);
-                return h1 + frac * (h2 - h1);
-            }
-        }
-        return null;
-    }
-
-    function computeRH(tempC, dewC) {
-        if (dewC < -900) return NaN;
-        const es = 6.112 * Math.exp((17.67 * tempC) / (tempC + 243.5));
-        const e = 6.112 * Math.exp((17.67 * dewC) / (dewC + 243.5));
-        if (es === 0) return 0;
-        const rh = (e / es) * 100;
-        return Math.min(100, Math.max(0, rh));
-    }
-
-    function wetBulbStull(T_C, RH) {
-        if (RH < 0 || RH > 100) return NaN;
-        const sqrtRH = Math.sqrt(RH + 8.313659);
-        const term1 = T_C * Math.atan(0.151977 * sqrtRH);
-        const term2 = Math.atan(T_C + RH);
-        const term3 = Math.atan(RH - 1.676331);
-        const term4 = 0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH);
-        return term1 + term2 - term3 + term4 - 4.686035;
-    }
-
-    function findWetBulbZero(data) {
-        if (data.length < 2) return null;
-        let prevTw = null, prevH = null;
-        for (let i=0; i<data.length; i++) {
-            const T = data[i].temp, Td = data[i].dew;
-            if (Td < -900) continue;
-            const RH = computeRH(T, Td);
-            if (isNaN(RH) || RH < 0) continue;
-            const Tw = wetBulbStull(T, RH);
-            if (isNaN(Tw)) continue;
-            const h = data[i].hgt;
-            if (prevTw !== null) {
-                if ((prevTw <= 0 && Tw >= 0) || (prevTw >= 0 && Tw <= 0)) {
-                    const frac = (0 - prevTw) / (Tw - prevTw);
-                    return prevH + frac * (h - prevH);
-                }
-            }
-            prevTw = Tw;
-            prevH = h;
-        }
-        return null;
-    }
-
-    function computeEL(data, lclHeight) {
-        if (data.length < 2 || lclHeight === null) return null;
-        let lclIdx = 0;
-        for (let i=0; i<data.length; i++) {
-            if (data[i].hgt >= lclHeight) { lclIdx = i; break; }
-        }
-        if (lclIdx >= data.length - 1) return null;
-        let parcelTemp = data[lclIdx].temp;
-        let prevParcelTemp = parcelTemp;
-        let prevH = data[lclIdx].hgt;
-        let foundEL = null;
-        for (let i=lclIdx+1; i<data.length; i++) {
-            const envTemp = data[i].temp;
-            const h = data[i].hgt;
-            const dh = h - prevH;
-            const dT = -6.5 * (dh / 1000.0);
-            const newParcelTemp = prevParcelTemp + dT;
-            if (prevParcelTemp > envTemp && newParcelTemp <= envTemp) {
-                const frac = (envTemp - prevParcelTemp) / (newParcelTemp - prevParcelTemp);
-                foundEL = prevH + frac * dh;
-                break;
-            }
-            prevParcelTemp = newParcelTemp;
-            prevH = h;
-            if (i === data.length - 1) foundEL = h;
-        }
-        return foundEL;
-    }
-
-    function computeLFC(data, lclHeight) {
-        if (data.length < 2 || lclHeight === null) return null;
-        let lclIdx = 0;
-        for (let i=0; i<data.length; i++) {
-            if (data[i].hgt >= lclHeight) { lclIdx = i; break; }
-        }
-        if (lclIdx >= data.length - 1) return null;
-        let parcelTemp = data[lclIdx].temp;
-        let prevParcelTemp = parcelTemp;
-        let prevH = data[lclIdx].hgt;
-        let foundLFC = null;
-        for (let i=lclIdx+1; i<data.length; i++) {
-            const envTemp = data[i].temp;
-            const h = data[i].hgt;
-            const dh = h - prevH;
-            const dT = -6.5 * (dh / 1000.0);
-            const newParcelTemp = prevParcelTemp + dT;
-            if (prevParcelTemp <= envTemp && newParcelTemp > envTemp) {
-                const frac = (envTemp - prevParcelTemp) / (newParcelTemp - prevParcelTemp);
-                foundLFC = prevH + frac * dh;
-                break;
-            }
-            prevParcelTemp = newParcelTemp;
-            prevH = h;
-            if (i === data.length - 1) foundLFC = h;
-        }
-        return foundLFC;
-    }
-
-    function computeMeanRH(data, h1=0, h2=3000) {
-        const pts = data.filter(p => p.hgt >= h1 && p.hgt <= h2);
-        if (pts.length < 2) return null;
-        let sumRH = 0, totalH = 0;
-        for (let i=0; i<pts.length-1; i++) {
-            const dh = pts[i+1].hgt - pts[i].hgt;
-            if (dh === 0) continue;
-            const rh1 = computeRH(pts[i].temp, pts[i].dew);
-            const rh2 = computeRH(pts[i+1].temp, pts[i+1].dew);
-            if (isNaN(rh1) || isNaN(rh2)) continue;
-            sumRH += ((rh1 + rh2) / 2) * dh;
-            totalH += dh;
-        }
-        if (totalH === 0) return null;
-        return sumRH / totalH;
-    }
-
-    function computeBulkShear(data, h1=0, h2=6000) {
-        const p1 = interpolate(data, h1);
-        const p2 = interpolate(data, h2);
-        if (!p1 || !p2) return 0;
-        return Math.hypot(p2.u - p1.u, p2.v - p1.v);
-    }
-
-    function computeMeanWind(data, h1=0, h2=6000) {
-        const pts = data.filter(p => p.hgt >= h1 && p.hgt <= h2);
-        if (pts.length < 2) return null;
-        let sumU=0, sumV=0, totalH=0;
-        for (let i=0; i<pts.length-1; i++) {
-            const dh = pts[i+1].hgt - pts[i].hgt;
-            if (dh === 0) continue;
-            sumU += ((pts[i].u + pts[i+1].u) / 2) * dh;
-            sumV += ((pts[i].v + pts[i+1].v) / 2) * dh;
-            totalH += dh;
-        }
-        if (totalH === 0) return null;
-        return { u: sumU/totalH, v: sumV/totalH };
-    }
-
-    function computeBunkers(data) {
-        const mean = computeMeanWind(data, 0, 6000);
-        if (!mean) return { right: null, left: null };
-        const p0 = interpolate(data, 0);
-        const p6 = interpolate(data, 6000);
-        if (!p0 || !p6) return { right: null, left: null };
-        const shearU = p6.u - p0.u;
-        const shearV = p6.v - p0.v;
-        const shearMag = Math.hypot(shearU, shearV);
-        if (shearMag < 1e-6) return { right: mean, left: mean };
-        const normU = shearU / shearMag;
-        const normV = shearV / shearMag;
-        const rotRightU = normV, rotRightV = -normU;
-        const rotLeftU = -normV, rotLeftV = normU;
-        const right = { u: mean.u + 7.5 * rotRightU, v: mean.v + 7.5 * rotRightV };
-        const left = { u: mean.u + 7.5 * rotLeftU, v: mean.v + 7.5 * rotLeftV };
-        return { right, left };
-    }
-
-    function computeSRH(data, stormU, stormV, h1=0, h2=3000) {
-        const pts = data.filter(p => p.hgt >= h1 && p.hgt <= h2);
-        if (pts.length < 2) return 0;
-        let srh = 0;
-        for (let i=0; i<pts.length-1; i++) {
-            const dz = pts[i+1].hgt - pts[i].hgt;
-            if (dz === 0) continue;
-            const u1=pts[i].u, v1=pts[i].v, u2=pts[i+1].u, v2=pts[i+1].v;
-            const du_dz = (u2 - u1) / dz;
-            const dv_dz = (v2 - v1) / dz;
-            const uAvg = (u1 + u2) / 2;
-            const vAvg = (v1 + v2) / 2;
-            srh += ((vAvg - stormV) * du_dz - (uAvg - stormU) * dv_dz) * dz;
-        }
-        return srh;
-    }
-
-    function computeLCL(data) {
-        if (data.length === 0) return null;
-        const surface = data.reduce((a,b) => a.hgt < b.hgt ? a : b);
-        const T = surface.temp + 273.15;
-        const Td = Math.min(surface.dew + 273.15, T);
-        try {
-            const T_LCL_K = 1 / (1/(Td - 56.0) + Math.log(T/Td)/800.0) + 56.0;
-            const gamma_d = 9.81 / 1004.0;
-            return surface.hgt + (T - T_LCL_K) / gamma_d;
-        } catch(e) { return null; }
-    }
-
-    function computeTT(data) {
-        const p850 = interpolatePressure(data, 850);
-        const p500 = interpolatePressure(data, 500);
-        if (!p850 || !p500) return null;
-        return p850.temp + p850.dew - 2 * p500.temp;
-    }
-
-    function computeKIndex(data) {
-        const p850 = interpolatePressure(data, 850);
-        const p700 = interpolatePressure(data, 700);
-        const p500 = interpolatePressure(data, 500);
-        if (!p850 || !p700 || !p500) return null;
-        return (p850.temp - p500.temp) + p850.dew - (p700.temp - p700.dew);
-    }
-
-    function computeSWEAT(data) {
-        const p850 = interpolatePressure(data, 850);
-        const p700 = interpolatePressure(data, 700);
-        const p500 = interpolatePressure(data, 500);
-        if (!p850 || !p700 || !p500) return null;
-        const T850 = p850.temp, Td850 = p850.dew;
-        const T500 = p500.temp;
-        const TT = T850 + Td850 - 2 * T500;
-        const V850 = p850.wspd ? p850.wspd : 0;
-        const V500 = p500.wspd ? p500.wspd : 0;
-        const DD850 = p850.wdir ? p850.wdir : 0;
-        const DD500 = p500.wdir ? p500.wdir : 0;
-        let SWEAT = 12 * Td850 + 20 * (TT - 49) + 2 * V850 + V500 + 125 * (Math.sin((DD500 - DD850) * Math.PI / 180) + 0.2);
-        if (Td850 < 0) SWEAT = 12 * Td850 + 2 * V850 + V500 + 125 * (Math.sin((DD500 - DD850) * Math.PI / 180) + 0.2);
-        if (TT < 49) SWEAT = 12 * Td850 + 2 * V850 + V500 + 125 * (Math.sin((DD500 - DD850) * Math.PI / 180) + 0.2);
-        if (SWEAT < 0) SWEAT = 0;
-        return SWEAT;
-    }
-
-    function computePWAT(data) {
-        if (data.length < 2) return null;
-        let pwat = 0;
-        const g = 9.81;
-        for (let i=0; i<data.length-1; i++) {
-            const p1 = data[i].press, p2 = data[i+1].press;
-            const Td1 = data[i].dew, Td2 = data[i+1].dew;
-            if (Td1 < -900 || Td2 < -900) continue;
-            const e1 = 6.112 * Math.exp((17.67 * Td1) / (Td1 + 243.5));
-            const e2 = 6.112 * Math.exp((17.67 * Td2) / (Td2 + 243.5));
-            const q1 = 0.622 * e1 / (p1 - 0.378 * e1);
-            const q2 = 0.622 * e2 / (p2 - 0.378 * e2);
-            pwat += ((q1 + q2) / 2) * (p1 - p2) / g;
-        }
-        return pwat;
-    }
-
-    function computeDCAPE(data) {
-        if (data.length < 2) return null;
-        const p700 = interpolatePressure(data, 700);
-        if (!p700) return null;
-        const T700 = p700.temp;
-        const Td700 = p700.dew;
-        if (Td700 < -900) return null;
-        const surface = data.reduce((a,b) => a.hgt < b.hgt ? a : b);
-        const ps = surface.press;
-        const g = 9.81;
-        let startIdx = 0;
-        for (let i=0; i<data.length; i++) {
-            if (data[i].press <= 700) { startIdx = i; break; }
-        }
-        if (startIdx === 0) return null;
-        let parcelTemp = T700;
-        let prevH = p700.hgt;
-        let prevP = 700;
-        let dcape = 0;
-        for (let i=startIdx-1; i>=0; i--) {
-            const envTemp = data[i].temp;
-            const h = data[i].hgt;
-            const p = data[i].press;
-            const dh = h - prevH;
-            if (dh === 0) continue;
-            const dT = (9.81/1004.0) * (-dh) / 1000.0;
-            const newParcelTemp = parcelTemp + dT;
-            const buoy = newParcelTemp - envTemp;
-            if (buoy < 0) {
-                dcape += -buoy * g * (-dh) / (envTemp + 273.15);
-            }
-            parcelTemp = newParcelTemp;
-            prevH = h;
-            prevP = p;
-        }
-        return dcape;
-    }
-
-    // ========== НОВИ СКОРИНГ ФУНКЦИЈЕ ПРЕМА ВАШИМ ПРАГОВИМА ==========
-    function scoreCAPE(v) {
-        if (v >= 4000) return 100;
-        if (v >= 2500) return 80;
-        if (v >= 1000) return 60;
-        if (v >= 500) return 40;
-        if (v >= 200) return 20;
-        return 0;
-    }
-    function scoreFreezing(v) {
-        if (v === null) return 0;
-        if (v < 2500) return 90;      // visok rizik
-        if (v >= 2500 && v <= 3500) return 60;
-        if (v > 3500 && v <= 4000) return 40;
-        return 20;
-    }
-    const scoreWBZero = function(v) {
-        if (v === null) return 0;
-        if (v < 2500) return 100;
-        if (v >= 2500 && v <= 3000) return 70;
-        if (v > 3000 && v <= 3500) return 50;
-        return 20;
-    };
-    function scoreLI(v) {
-        if (v === null) return 0;
-        if (v < -6) return 100;
-        if (v >= -6 && v <= -4) return 70;
-        if (v > -4 && v <= -2) return 40;
-        if (v > -2 && v <= 0) return 20;
-        return 0;
-    }
-    function scoreTT(v) {
-        if (v === null) return 0;
-        if (v >= 55) return 100;
-        if (v >= 50) return 70;
-        if (v >= 45) return 40;
-        if (v >= 40) return 20;
-        return 0;
-    }
-    function scoreKIndex(v) {
-        if (v === null) return 0;
-        if (v >= 40) return 100;
-        if (v >= 30) return 70;
-        if (v >= 20) return 40;
-        if (v >= 10) return 20;
-        return 0;
-    }
-    function scoreSWEAT(v) {
-        if (v === null) return 0;
-        if (v >= 400) return 100;
-        if (v >= 300) return 70;
-        if (v >= 200) return 40;
-        if (v >= 100) return 20;
-        return 0;
-    }
-    function scoreLCL(v) {
-        if (v === null) return 0;
-        if (v <= 1200) return 80;
-        if (v > 1200 && v <= 1800) return 60;
-        if (v > 1800 && v <= 2500) return 30;
-        return 0;
-    }
-    function scoreLFC(v) {
-        if (v === null) return 0;
-        if (v <= 1500) return 80;
-        if (v > 1500 && v <= 2200) return 60;
-        if (v > 2200 && v <= 3000) return 30;
-        return 0;
-    }
-    function scoreEL(v) {
-        if (v === null) return 0;
-        if (v >= 10000) return 100;
-        if (v >= 8000) return 80;
-        if (v >= 6000) return 50;
-        if (v >= 4000) return 20;
-        return 0;
-    }
-    function scoreShear(v) {
-        if (v >= 25) return 100;
-        if (v >= 20) return 80;
-        if (v >= 15) return 50;
-        if (v >= 10) return 20;
-        return 0;
-    }
-    function scoreSRH(v) {
-        if (v >= 300) return 100;
-        if (v >= 250) return 80;
-        if (v >= 150) return 50;
-        if (v >= 80) return 20;
-        return 0;
-    }
-    function scoreDCAPE(v) {
-        if (v === null) return 0;
-        if (v >= 1000) return 100;
-        if (v >= 700) return 70;
-        if (v >= 400) return 40;
-        if (v >= 200) return 20;
-        return 0;
-    }
-    function scorePWAT(v) {
-        if (v === null) return 0;
-        if (v >= 40) return 100;
-        if (v >= 30) return 70;
-        if (v >= 20) return 40;
-        if (v >= 10) return 20;
-        return 0;
-    }
-    function scoreCIN(v) {
-        if (v === null) return 0;
-        if (v >= -10) return 100;
-        if (v >= -50) return 70;
-        if (v >= -150) return 40;
-        if (v >= -300) return 20;
-        return 0;
-    }
-
-    // ---------- ФУНКЦИЈА ЗА ОДРЕЂИВАЊЕ ТИПА Cb ОБЛАКА (не мења се) ----------
-    function classifyCB(cape, shear06, srh03, lcl, el, freezingLevel, meanRH03) {
-        let scoreSupercell = 0, scoreMulticell = 0, scoreOrdinary = 0;
-
-        if (cape >= 1000) { scoreSupercell += 20; scoreMulticell += 25; scoreOrdinary += 30; }
-        else if (cape >= 500) { scoreSupercell += 10; scoreMulticell += 20; scoreOrdinary += 25; }
-        else if (cape >= 200) { scoreSupercell += 5; scoreMulticell += 10; scoreOrdinary += 15; }
-        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 5; }
-
-        if (shear06 >= 20) { scoreSupercell += 30; scoreMulticell += 15; scoreOrdinary += 5; }
-        else if (shear06 >= 15) { scoreSupercell += 20; scoreMulticell += 20; scoreOrdinary += 10; }
-        else if (shear06 >= 10) { scoreSupercell += 10; scoreMulticell += 15; scoreOrdinary += 15; }
-        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 10; }
-
-        if (srh03 >= 150) { scoreSupercell += 25; scoreMulticell += 10; scoreOrdinary += 0; }
-        else if (srh03 >= 80) { scoreSupercell += 15; scoreMulticell += 15; scoreOrdinary += 5; }
-        else if (srh03 >= 50) { scoreSupercell += 5; scoreMulticell += 10; scoreOrdinary += 10; }
-        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 10; }
-
-        if (lcl !== null && lcl <= 1200) { scoreSupercell += 15; scoreMulticell += 10; scoreOrdinary += 5; }
-        else if (lcl !== null && lcl <= 1800) { scoreSupercell += 8; scoreMulticell += 12; scoreOrdinary += 8; }
-        else if (lcl !== null && lcl <= 2500) { scoreSupercell += 2; scoreMulticell += 8; scoreOrdinary += 10; }
-        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 5; }
-
-        if (el !== null && el >= 8000) { scoreSupercell += 15; scoreMulticell += 15; scoreOrdinary += 10; }
-        else if (el !== null && el >= 6000) { scoreSupercell += 10; scoreMulticell += 15; scoreOrdinary += 15; }
-        else if (el !== null && el >= 4000) { scoreSupercell += 5; scoreMulticell += 10; scoreOrdinary += 15; }
-        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 10; }
-
-        if (freezingLevel !== null && freezingLevel >= 2500 && freezingLevel <= 3500) {
-            scoreSupercell += 10; scoreMulticell += 10; scoreOrdinary += 5;
-        } else if (freezingLevel !== null && ((freezingLevel >= 2000 && freezingLevel < 2500) || (freezingLevel > 3500 && freezingLevel <= 4000))) {
-            scoreSupercell += 5; scoreMulticell += 8; scoreOrdinary += 8;
-        } else {
-            scoreSupercell += 0; scoreMulticell += 3; scoreOrdinary += 5;
-        }
-
-        if (meanRH03 !== null && meanRH03 >= 60) {
-            scoreSupercell += 10; scoreMulticell += 10; scoreOrdinary += 5;
-        } else if (meanRH03 !== null && meanRH03 >= 40) {
-            scoreSupercell += 5; scoreMulticell += 8; scoreOrdinary += 8;
-        } else {
-            scoreSupercell += 0; scoreMulticell += 3; scoreOrdinary += 5;
-        }
-
-        const maxScore = Math.max(scoreSupercell, scoreMulticell, scoreOrdinary);
-        if (maxScore === 0) return { type: 'Slaba konvekcija', description: 'Nema uslova za organizovanu konvekciju.' };
-        if (scoreSupercell === maxScore && scoreSupercell >= 40) {
-            return { type: '⚡ Superćelija (Cb capillatus / incus)', description: 'Visok vertikalni smicaj, jak helisitet, nizak LCL, povoljne izoterme. Moguć tornado i veliki grad.' };
-        } else if (scoreMulticell === maxScore && scoreMulticell >= 30) {
-            return { type: '🌩️ Multićelija (Cb congestus / calvus)', description: 'Umeren smicaj, više pojedinačnih ćelija. Moguć jak pljusak, grad i grmljavina.' };
-        } else if (scoreOrdinary === maxScore && scoreOrdinary >= 20) {
-            return { type: '⛅ Običan Cb (Cb humilis / mediocris)', description: 'Slab smicaj, lokalni pljuskovi. Povremena grmljavina, mali grad.' };
-        } else {
-            return { type: '🌤️ Slaba konvekcija', description: 'Nema dovoljno energije ili smicaja za ozbiljnije nevreme.' };
-        }
-    }
-
-    // ====================== ГЛАВНА ФУНКЦИЈА ======================
-    function analyze() {
-        const text = document.getElementById('soundingData').value;
-        const errorDiv = document.getElementById('errorMsg');
-        const resultsDiv = document.getElementById('resultsContainer');
-        errorDiv.style.display = 'none';
-        resultsDiv.style.display = 'none';
-
-        if (!text || text.trim().length === 0) {
-            errorDiv.textContent = '⚠️ Грешка: Нисте унели податке. Налепите садржај .profile фајла.';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        try {
-            const parsed = parseData(text);
-            const { meta, data } = parsed;
-
-            if (data.length < 5) {
-                errorDiv.textContent = '⚠️ Грешка: Није пронађено довољно тачака у профилу. Проверите формат.';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            // ---------- ИЗРАЧУНАВАЊЕ ПАРАМЕТАРА ----------
-            const shear06 = computeBulkShear(data, 0, 6000);
-            const shear03 = computeBulkShear(data, 0, 3000);
-            const cape = meta.CAPE !== undefined ? meta.CAPE : 0;
-            const cin = meta.CIN !== undefined ? meta.CIN : 0;
-            const li = meta.LISD !== undefined ? meta.LISD : (meta.LIB4 !== undefined ? meta.LIB4 : null);
-            const rh2m = meta.RH2M !== undefined ? meta.RH2M : null;
-
-            let surfaceRH = null;
-            if (data.length > 0) {
-                const surface = data.reduce((a,b) => a.hgt < b.hgt ? a : b);
-                if (surface.temp !== undefined && surface.dew !== undefined && surface.dew > -999) {
-                    surfaceRH = computeRH(surface.temp, surface.dew);
-                }
-            }
-            let displayRH = surfaceRH;
-            if (rh2m !== null && !isNaN(rh2m)) {
-                if (rh2m <= 1 && rh2m >= 0) displayRH = rh2m * 100;
-                else if (rh2m > 0 && rh2m <= 100) displayRH = rh2m;
-                else displayRH = surfaceRH;
-            }
-
-            const meanRH03 = computeMeanRH(data, 0, 3000);
-
-            const bunkers = computeBunkers(data);
-            let srh03R = 0, srh01R = 0;
-            if (bunkers.right) {
-                srh03R = computeSRH(data, bunkers.right.u, bunkers.right.v, 0, 3000);
-                srh01R = computeSRH(data, bunkers.right.u, bunkers.right.v, 0, 1000);
-            }
-
-            const lcl = computeLCL(data);
-            const freezingLevel = findHeightForTemp(data, 0);
-            const wbZero = findWetBulbZero(data);
-            const el = computeEL(data, lcl);
-            const lfc = computeLFC(data, lcl);
-            const tt = computeTT(data);
-            const kIndex = computeKIndex(data);
-            const sweat = computeSWEAT(data);
-            const pwat = computePWAT(data);
-            const dcape = computeDCAPE(data);
-
-            // ---------- ТИП Cb ОБЛАКА ----------
-            const cbType = classifyCB(cape, shear06, srh03R, lcl, el, freezingLevel, meanRH03);
-
-            // ---------- БОДОВИ (нови scoring) ----------
-            const scores = {
-                cape: scoreCAPE(cape),
-                shear: scoreShear(shear06),
-                shear03: scoreShear(shear03),
-                wbZero: scoreWBZero(wbZero),
-                freezing: scoreFreezing(freezingLevel),
-                el: scoreEL(el),
-                li: scoreLI(li),
-                sweat: scoreSWEAT(sweat),
-                srh: scoreSRH(srh03R),
-                lcl: scoreLCL(lcl),
-                lfc: scoreLFC(lfc),
-                tt: scoreTT(tt),
-                cin: scoreCIN(cin),
-                pwat: scorePWAT(pwat),
-                kIndex: scoreKIndex(kIndex),
-                dcape: scoreDCAPE(dcape)
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ------------------------------------------------------------
+            // 0. FIREBASE KONFIGURACIJA (Realtime Database)
+            // ------------------------------------------------------------
+            const firebaseConfig = {
+                apiKey: "YOUR_API_KEY",
+                authDomain: "planseta-ce461.firebaseapp.com",
+                databaseURL: "https://planseta-ce461-default-rtdb.europe-west1.firebasedatabase.app/",
+                projectId: "planseta-ce461",
+                storageBucket: "planseta-ce461.appspot.com",
+                messagingSenderId: "YOUR_SENDER_ID",
+                appId: "YOUR_APP_ID"
             };
 
-            // ---------- ТЕЖИНЕ (звездице) ----------
-            const weights = {
-                cape: 5,
-                freezing: 5,
-                wbZero: 5,
-                li: 4,
-                tt: 4,
-                sweat: 4,
-                kIndex: 3,
-                lcl: 3,
-                lfc: 3,
-                el: 4,
-                shear: 5,
-                shear03: 4,
-                srh: 4,
-                dcape: 2,
-                pwat: 2,
-                cin: 3
-            };
-            const totalWeight = Object.values(weights).reduce((a,b) => a+b, 0);
+            let firebaseEnabled = false;
+            let firebaseInitialized = false;
+            let dbRef = null; // database reference
+            let listenerRef = null; // for .off()
+            const FB_PATH = 'bPoints'; // path in RTDB
 
-            let weightedProb = 0;
-            for (let key in weights) {
-                const w = weights[key] / totalWeight;
-                const s = scores[key] || 0;
-                weightedProb += w * s;
-            }
-            const hailProb = Math.min(100, Math.max(0, weightedProb));
+            const firebaseStatusDiv = document.getElementById('firebaseStatus');
+            const fbStatusText = document.getElementById('fbStatusText');
 
-            // SCP
-            let scp = 0;
-            if (cape > 0 && shear06 > 0 && srh03R > 0) {
-                scp = (cape / 1000.0) * (shear06 / 20.0) * (srh03R / 50.0);
-            }
-
-            // ========== ПРИКАЗ ==========
-            const grid = document.getElementById('paramGrid');
-            grid.innerHTML = '';
-
-            function statusDot(val, goodFn, mediumFn) {
-                if (goodFn && goodFn(val)) return '<span class="status-dot good"></span>';
-                if (mediumFn && mediumFn(val)) return '<span class="status-dot medium"></span>';
-                return '<span class="status-dot bad"></span>';
+            // ------------------------------------------------------------
+            // 0a. Inicijalizacija Firebase-a
+            // ------------------------------------------------------------
+            function initFirebase() {
+                if (firebaseInitialized) return true;
+                try {
+                    if (typeof firebase === 'undefined') {
+                        console.warn('Firebase SDK nije učitano.');
+                        return false;
+                    }
+                    if (firebaseConfig.apiKey === 'YOUR_API_KEY' ||
+                        firebaseConfig.projectId === 'planseta-ce461' && firebaseConfig.databaseURL ===
+                        "https://planseta-ce461-default-rtdb.europe-west1.firebasedatabase.app/") {
+                        // Postavljeno je, ali možda korisnik treba zamijeniti ključeve?
+                        // Nastavljamo, ali provjeravamo da li je konfiguracija validna.
+                    }
+                    firebase.initializeApp(firebaseConfig);
+                    dbRef = firebase.database().ref();
+                    firebaseInitialized = true;
+                    console.log('✅ Firebase (RTDB) inicijalizovan.');
+                    return true;
+                } catch (e) {
+                    console.error('Firebase init greška:', e);
+                    fbStatusText.textContent = 'greška';
+                    firebaseStatusDiv.className = 'error';
+                    firebaseStatusDiv.style.display = 'block';
+                    return false;
+                }
             }
 
-            function scoreDisplay(score) {
-                return ` (бод: ${Math.round(score)})`;
+            // ------------------------------------------------------------
+            // 0b. Firebase: učitaj B tačke iz Realtime Database
+            // ------------------------------------------------------------
+            async function loadBPointsFromFirebase() {
+                if (!firebaseInitialized || !dbRef) {
+                    console.warn('Firebase nije inicijalizovan.');
+                    return false;
+                }
+                try {
+                    const snapshot = await dbRef.child(FB_PATH).once('value');
+                    const data = snapshot.val();
+                    if (data && Array.isArray(data)) {
+                        if (data.length > 0) {
+                            clearBPointsInternal(false);
+                            for (const item of data) {
+                                await restoreBPointFromFirebase(item);
+                            }
+                            console.log(`🔥 Učitano ${data.length} B tačaka iz Firebase RTDB.`);
+                            fbStatusText.textContent = `sinkronizovano (${data.length})`;
+                            firebaseStatusDiv.className = 'connected';
+                            firebaseStatusDiv.style.display = 'block';
+                            updatePopups();
+                            if (tableOverlay.style.display === 'flex') {
+                                renderTable();
+                            }
+                            return true;
+                        } else {
+                            console.log('🔥 Firebase: nema sačuvanih B tačaka.');
+                            fbStatusText.textContent = 'prazno';
+                            firebaseStatusDiv.className = 'connected';
+                            firebaseStatusDiv.style.display = 'block';
+                            return true;
+                        }
+                    } else {
+                        console.log('🔥 Firebase: dokument ne postoji ili je prazan.');
+                        fbStatusText.textContent = 'prazno';
+                        firebaseStatusDiv.className = 'connected';
+                        firebaseStatusDiv.style.display = 'block';
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('Greška pri učitavanju iz Firebase:', e);
+                    fbStatusText.textContent = 'greška učitavanja';
+                    firebaseStatusDiv.className = 'error';
+                    firebaseStatusDiv.style.display = 'block';
+                    return false;
+                }
             }
 
-            // Приказ типа Cb
-            const cbCard = document.createElement('div');
-            cbCard.className = 'param-card cb-type-card';
-            cbCard.innerHTML = `
-                <div class="label">💡 Očekivani tip Cb oblaka</div>
-                <div class="value">${cbType.type}</div>
-                <div class="threshold">${cbType.description}</div>
-            `;
-            grid.appendChild(cbCard);
+            // ------------------------------------------------------------
+            // 0c. Firebase: sačuvaj B tačke u Realtime Database
+            // ------------------------------------------------------------
+            async function saveBPointsToFirebase() {
+                if (!firebaseEnabled || !firebaseInitialized || !dbRef) return false;
+                if (isSyncing) {
+                    syncPending = true;
+                    return false;
+                }
+                try {
+                    isSyncing = true;
+                    const dataToSave = bPoints.map(row => ({
+                        bIndex: row.bIndex,
+                        bLat: row.bLat,
+                        bLon: row.bLon,
+                        bDate: row.bDate ? row.bDate.toISOString() : null,
+                        bTime: row.bTime,
+                        aName: row.aName,
+                        az: row.az,
+                        dist: row.dist,
+                        pp8: row.pp8,
+                        td6b: row.td6b,
+                        pp8x: row.pp8x || 0,
+                        td6bx: row.td6bx || 0,
+                        confirmationTime: row.confirmationTime || null,
+                        confirmationDate: row.confirmationDate ? row.confirmationDate.toISOString() : null
+                    }));
 
-            // Листа параметара са новим тежинама (приказујемо звездице)
-            const params = [
-                { label: 'CAPE', value: cape, unit: 'J/kg', score: scores.cape, weight: 5,
-                    good: v => v >= 1000, medium: v => v >= 500 && v < 1000, desc: '≥1000 = umjeren' },
-                { label: 'Freezing Level', value: freezingLevel, unit: 'm', score: scores.freezing, weight: 5,
-                    good: v => v !== null && v < 2500, medium: v => v !== null && v >= 2500 && v <= 3500,
-                    desc: '<2500 = visok rizik' },
-                { label: 'Wet Bulb Zero', value: wbZero, unit: 'm', score: scores.wbZero, weight: 5,
-                    good: v => v !== null && v < 2500, medium: v => v !== null && v >= 2500 && v <= 3000,
-                    desc: '<2500 = vrlo povoljno' },
-                { label: 'LI (Lifted Index)', value: li, unit: '', score: scores.li, weight: 4,
-                    good: v => v !== null && v <= -4, medium: v => v !== null && v > -4 && v <= -2,
-                    desc: '≤ -4 = jaka konvekcija' },
-                { label: 'Total Totals (TT)', value: tt, unit: '', score: scores.tt, weight: 4,
-                    good: v => v !== null && v >= 50, medium: v => v !== null && v >= 45 && v < 50,
-                    desc: '≥50 = jaka nestabilnost' },
-                { label: 'SWEAT', value: sweat, unit: '', score: scores.sweat, weight: 4,
-                    good: v => v !== null && v >= 300, medium: v => v !== null && v >= 200 && v < 300,
-                    desc: '≥300 = povoljno' },
-                { label: 'K Index', value: kIndex, unit: '', score: scores.kIndex, weight: 3,
-                    good: v => v !== null && v >= 30, medium: v => v !== null && v >= 20 && v < 30,
-                    desc: '≥30 = nestabilno' },
-                { label: 'LCL visina', value: lcl, unit: 'm', score: scores.lcl, weight: 3,
-                    good: v => v !== null && v <= 1200, medium: v => v !== null && v > 1200 && v <= 1800,
-                    desc: '≤1200 = nizak' },
-                { label: 'LFC (Level of Free Conv.)', value: lfc, unit: 'm', score: scores.lfc, weight: 3,
-                    good: v => v !== null && v <= 1500, medium: v => v !== null && v > 1500 && v <= 2200,
-                    desc: 'niži = lakši uspon' },
-                { label: 'EL (Equilibrium Level)', value: el, unit: 'm', score: scores.el, weight: 4,
-                    good: v => v !== null && v >= 8000, medium: v => v !== null && v >= 6000 && v < 8000,
-                    desc: 'viši EL = jači uzlazni tok' },
-                { label: 'Bulk Shear 0–6 km', value: shear06, unit: 'm/s', score: scores.shear, weight: 5,
-                    good: v => v >= 20, medium: v => v >= 15 && v < 20, desc: '≥20 = odličan' },
-                { label: 'Bulk Shear 0–3 km', value: shear03, unit: 'm/s', score: scores.shear03, weight: 4,
-                    good: v => v >= 12, medium: v => v >= 8 && v < 12, desc: '≥12 = povoljno' },
-                { label: 'SRH 0–3 km (desni)', value: srh03R, unit: 'm²/s²', score: scores.srh, weight: 4,
-                    good: v => v >= 150, medium: v => v >= 80 && v < 150, desc: '≥150 = povoljno' },
-                { label: 'DCAPE', value: dcape, unit: 'J/kg', score: scores.dcape, weight: 2,
-                    good: v => v !== null && v >= 700, medium: v => v !== null && v >= 400 && v < 700,
-                    desc: '≥700 = jak downburst' },
-                { label: 'PWAT', value: pwat, unit: 'mm', score: scores.pwat, weight: 2,
-                    good: v => v !== null && v >= 30, medium: v => v !== null && v >= 20 && v < 30,
-                    desc: '≥30 mm = vlažan profil' },
-                { label: 'CIN', value: cin, unit: 'J/kg', score: scores.cin, weight: 3,
-                    good: v => v >= -50, medium: v => v < -50 && v >= -150, desc: 'manje negativno = bolje' }
+                    await dbRef.child(FB_PATH).set(dataToSave);
+                    console.log(`🔥 Sačuvano ${dataToSave.length} B tačaka u Firebase RTDB.`);
+                    fbStatusText.textContent = `sačuvano (${dataToSave.length})`;
+                    firebaseStatusDiv.className = 'connected';
+                    firebaseStatusDiv.style.display = 'block';
+                    isSyncing = false;
+                    if (syncPending) {
+                        syncPending = false;
+                        saveBPointsToFirebase();
+                    }
+                    return true;
+                } catch (e) {
+                    console.error('Greška pri snimanju u Firebase:', e);
+                    fbStatusText.textContent = 'greška snimanja';
+                    firebaseStatusDiv.className = 'error';
+                    firebaseStatusDiv.style.display = 'block';
+                    isSyncing = false;
+                    return false;
+                }
+            }
+
+            // ------------------------------------------------------------
+            // 0d. Firebase: restauriraj jednu B tačku (ista kao i prije)
+            // ------------------------------------------------------------
+            async function restoreBPointFromFirebase(item) {
+                return new Promise((resolve) => {
+                    try {
+                        const lat = item.bLat;
+                        const lon = item.bLon;
+                        const aName = item.aName || '?';
+                        const az = item.az || 0;
+                        const dist = item.dist || 0;
+                        const pp8 = item.pp8 || 0;
+                        const td6b = item.td6b || 0;
+                        const pp8x = item.pp8x || 0;
+                        const td6bx = item.td6bx || 0;
+                        const bIndex = item.bIndex || (bPoints.length + 1);
+                        const bDate = item.bDate ? new Date(item.bDate) : new Date();
+                        const bTime = item.bTime || bDate.toLocaleString();
+                        const confirmationTime = item.confirmationTime || null;
+                        const confirmationDate = item.confirmationDate ? new Date(item.confirmationDate) : null;
+
+                        const row = {
+                            bIndex: bIndex,
+                            bLat: lat,
+                            bLon: lon,
+                            bDate: bDate,
+                            bTime: bTime,
+                            aName: aName,
+                            az: az,
+                            dist: dist,
+                            pp8: pp8,
+                            td6b: td6b,
+                            pp8x: pp8x,
+                            td6bx: td6bx,
+                            confirmationTime: confirmationTime,
+                            confirmationDate: confirmationDate,
+                            marker: null
+                        };
+
+                        const popupContent = confirmationTime ?
+                            `PP8 ${pp8} TD6B ${td6b} B#${bIndex}<br>` +
+                            `A: ${aName}<br>` +
+                            `lat: ${lat}, lon: ${lon}<br>Vrijeme: ${bTime}<br>` +
+                            `Azimut od A: ${az.toFixed(1)}°<br>Udaljenost: ${dist.toFixed(1)} km<br>` +
+                            `PP8X: ${pp8x}, TD6BX: ${td6bx}<br>` +
+                            `Potvrda: ${confirmationTime}` :
+                            `PP8 ${pp8} TD6B ${td6b} B$${bIndex}<br>` +
+                            `A: ${aName}<br>` +
+                            `lat: ${lat}, lon: ${lon}<br>Vrijeme: ${bTime}<br>` +
+                            `Azimut od A: ${az.toFixed(1)}°<br>Udaljenost: ${dist.toFixed(1)} km<br>` +
+                            `PP8X: -, TD6BX: -<br>Potvrda: -`;
+
+                        const marker = L.marker([lat, lon], { icon: bIcon })
+                            .addTo(bLayer)
+                            .bindPopup(popupContent);
+
+                        marker.on('mouseover', function(e) {
+                            const prefix = row.confirmationTime ? 'B#' : 'B$';
+                            showHoverTooltip(`${prefix}${row.bIndex}  PP8:${row.pp8}  TD6B:${row.td6b}`, e
+                            .latlng);
+                            hoveringBRow = row;
+                            updateMouseAzimuth(e.latlng);
+                        });
+                        marker.on('mouseout', function(e) {
+                            hideHoverTooltip();
+                            hoveringBRow = null;
+                            if (lastMouseLatLng) {
+                                updateMouseAzimuth(lastMouseLatLng);
+                            }
+                        });
+
+                        marker.on('contextmenu', function(e) {
+                            L.DomEvent.stopPropagation(e);
+                            L.DomEvent.preventDefault(e);
+                            if (!row.confirmationTime) {
+                                const pp8xVal = selectedPP8X;
+                                const td6bxVal = selectedTD6BX;
+                                const confirmNow = new Date();
+                                row.pp8x = pp8xVal;
+                                row.td6bx = td6bxVal;
+                                row.confirmationDate = confirmNow;
+                                row.confirmationTime = confirmNow.toLocaleString();
+                                const popupConfirmed =
+                                    `PP8 ${row.pp8} TD6B ${row.td6b} B#${row.bIndex}<br>` +
+                                    `A: ${row.aName}<br>` +
+                                    `lat: ${row.bLat}, lon: ${row.bLon}<br>Vrijeme: ${row.bTime}<br>` +
+                                    `Azimut od A: ${row.az.toFixed(1)}°<br>Udaljenost: ${row.dist.toFixed(1)} km<br>` +
+                                    `PP8X: ${row.pp8x}, TD6BX: ${row.td6bx}<br>` +
+                                    `Potvrda: ${row.confirmationTime}`;
+                                marker.setPopupContent(popupConfirmed);
+                                if (hoveringBRow === row) {
+                                    showHoverTooltip(`B#${row.bIndex}  PP8:${row.pp8}  TD6B:${row.td6b}`, e
+                                        .latlng);
+                                    updateMouseAzimuth(e.latlng);
+                                }
+                                if (tableOverlay.style.display === 'flex') {
+                                    renderTable();
+                                }
+                                if (firebaseEnabled) {
+                                    saveBPointsToFirebase();
+                                }
+                            } else {
+                                alert('Ova tačka B je već potvrđena.');
+                            }
+                        });
+
+                        marker.on('click', function(e) {
+                            if (deleteMode) {
+                                deleteBPoint(row);
+                                L.DomEvent.stopPropagation(e);
+                                L.DomEvent.preventDefault(e);
+                            }
+                        });
+
+                        row.marker = marker;
+                        bPoints.push(row);
+                        if (row.bIndex > bCounter) bCounter = row.bIndex;
+                        resolve(true);
+                    } catch (e) {
+                        console.error('Greška pri restauraciji B tačke:', e);
+                        resolve(false);
+                    }
+                });
+            }
+
+            // ------------------------------------------------------------
+            // 0e. Firebase: postavi real-time listener (RTDB)
+            // ------------------------------------------------------------
+            function setupFirebaseListener() {
+                if (!firebaseEnabled || !firebaseInitialized || !dbRef) return;
+                if (listenerRef) {
+                    listenerRef.off('value');
+                    listenerRef = null;
+                }
+                try {
+                    const ref = dbRef.child(FB_PATH);
+                    listenerRef = ref;
+                    ref.on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data && Array.isArray(data)) {
+                            if (data.length !== bPoints.length && !isSyncing) {
+                                console.log('🔥 Firebase RTDB: detektovana vanjska promjena, učitavam...');
+                                loadBPointsFromFirebase().then(() => {
+                                    updatePopups();
+                                    if (tableOverlay.style.display === 'flex') {
+                                        renderTable();
+                                    }
+                                });
+                            }
+                        }
+                    }, (error) => {
+                        console.error('Firebase RTDB listener greška:', error);
+                        fbStatusText.textContent = 'listener greška';
+                        firebaseStatusDiv.className = 'error';
+                    });
+                    console.log('🔥 Firebase RTDB real-time listener aktiviran.');
+                } catch (e) {
+                    console.error('Greška pri postavljanju listener-a:', e);
+                }
+            }
+
+            // ------------------------------------------------------------
+            // 0f. Firebase: toggle
+            // ------------------------------------------------------------
+            const firebaseBtn = document.getElementById('firebaseBtn');
+
+            async function toggleFirebase() {
+                if (!firebaseInitialized) {
+                    const ok = initFirebase();
+                    if (!ok) {
+                        alert('Firebase nije inicijalizovan. Provjerite konfiguraciju.');
+                        return;
+                    }
+                }
+                firebaseEnabled = !firebaseEnabled;
+                if (firebaseEnabled) {
+                    const loaded = await loadBPointsFromFirebase();
+                    if (loaded) {
+                        setupFirebaseListener();
+                        firebaseBtn.className = 'firebase-on';
+                        firebaseBtn.title = 'Isključi Firebase sinhronizaciju';
+                        fbStatusText.textContent = 'aktivno';
+                        firebaseStatusDiv.className = 'connected';
+                        firebaseStatusDiv.style.display = 'block';
+                        console.log('🔥 Firebase sinhronizacija UKLJUČENA.');
+                        await saveBPointsToFirebase();
+                    } else {
+                        firebaseEnabled = false;
+                        firebaseBtn.className = 'firebase-off';
+                        firebaseBtn.title = 'Uključi Firebase sinhronizaciju';
+                        fbStatusText.textContent = 'greška';
+                        firebaseStatusDiv.className = 'error';
+                        firebaseStatusDiv.style.display = 'block';
+                    }
+                } else {
+                    if (listenerRef) {
+                        listenerRef.off('value');
+                        listenerRef = null;
+                    }
+                    firebaseBtn.className = 'firebase-off';
+                    firebaseBtn.title = 'Uključi Firebase sinhronizaciju';
+                    fbStatusText.textContent = 'isključen';
+                    firebaseStatusDiv.className = '';
+                    firebaseStatusDiv.style.display = 'none';
+                    console.log('🔥 Firebase sinhronizacija ISKLJUČENA.');
+                }
+            }
+
+            firebaseBtn.addEventListener('click', toggleFirebase);
+
+            // ------------------------------------------------------------
+            // 1. CSV podaci (kompletni) – isti kao prije
+            // ------------------------------------------------------------
+            const csvData = `FPGS,sirina,duzina,zoom,altitude,pp8pocetakA,pp8krajA,pp8pocetakB,pp8krajB,pp8pocetakC,pp8krajC,pp8pocetakD,pp8krajD,pp6pocetakA,pp6krajA,pp6pocetakB,pp6krajB,pp6pocetakC,pp6krajC,pp6pocetakD,pp6krajD,pp8radijusstart,pp8radijusend,pp6radijusstart,pp6radijusend,opstina
+    NT,45.032990,17.317638,42000,1,305,35,155,245,,,,,305,35,95,245,,,,,4,8,2.25,4.5,90501
+    1,45.197576,17.002114,42000,1,305,105,,,,,,,305,105,,,,,,,4,8,2.25,4.5,90501
+    4,45.102000,17.036111,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90501
+    13,45.061523,17.204731,42000,1,285,75,95,115,155,165,,,285,75,95,115,155,165,,,4,8,2.25,4.5,90501
+    17,45.056085,16.997707,42000,291,45,105,,,,,,,45,105,,,,,,,4,8,2.25,4.5,90501
+    19,45.000442,16.895683,42000,1,25,65,,,,,,,25,65,,,,,,,4,8,2.25,4.5,90505
+    24,45.022078,17.103973,42000,285,85,225,305,315,,,,,85,225,305,315,,,,,4,8,2.25,4.5,90501
+    36,45.021984,18.474102,42000,128,155,175,215,235,275,65,,,,,,,,,,,4,8,2.25,4.5,90512
+    37,44.95318,18.425745,42000,135.1,315,355,265,285,,,,,315,355,265,285,,,,,4,8,2.25,4.5,90512
+    39,44.9484,18.571268,42000,139.7,5,65,,,,,,,5,65,,,,,,,4,8,2.25,4.5,90512
+    41,44.89454,18.068678,42000,289.8,95,115,,,,,,,95,115,,,,,,,4,8,2.25,4.5,90509
+    95,44.97778,18.636152,42000,1,185,265,345,75,,,,,185,265,345,75,,,,,4,8,2.25,4.5,90513
+    96,44.936504,18.642622,42000,141.8,355,35,,,,,,,355,35,,,,,,,4,8,2.25,4.5,90513
+    97,44.893814,18.585032,42000,167.1,45,75,,,,,,,45,75,,,,,,,4,8,2.25,4.5,90514
+    98,44.845715,18.552818,42000,169.9,45,85,125,165,285,305,,,45,85,125,165,285,305,,,4,8,2.25,4.5,90514
+    99,44.927594,18.532273,42000,1,295,335,,,,,,,295,335,,,,,,,4,8,2.25,4.5,90514
+    130,44.92511,18.697338,42000,99.2,315,145,,,,,,,315,145,,,,,,,4,8,2.25,4.5,90515
+    131,44.879578,18.692314,42000,119.1,255,325,35,115,,,,,255,325,35,115,,,,,4,8,2.25,4.5,90515
+    132,44.828472,18.659004,42000,123.9,55,95,105,205,,,,,55,95,105,205,,,,,4,8,2.25,4.5,90515
+    133,44.804398,18.57171,42000,155.4,165,225,345,15,,,,,165,225,345,15,,,,,4,8,2.25,4.5,90515
+    134,44.890068,18.749847,42000,113.3,355,185,,,,,,,355,185,,,,,,,4,8,2.25,4.5,90515
+    135,44.828205,18.735760,42000,134.1,235,355,15,75,205,225,175,195,235,355,15,75,205,225,,,4,8,2.25,4.5,90515
+    136,44.784958,18.737307,42000,1,105,135,255,285,,,,,105,135,255,285,,,,,4,8,2.25,4.5,90515
+    137,44.781956,18.663582,42000,198.9,65,215,,,,,,,65,215,,,,,,,4,8,2.25,4.5,90515
+    145,44.862095,17.83947,42000,270.8,175,205,,,,,,,175,205,,,,,,,4,8,2.25,4.5,90508
+    146,44.840717,17.928776,42000,191,335,355,,,,,,,335,355,,,,,,,4,8,2.25,4.5,90508
+    147,44.912952,18.401289,42000,137.8,105,175,,,,,,,105,175,,,,,,,4,8,2.25,4.5,90511
+    148,44.864983,18.378574,42000,304.7,45,85,,,,,,,45,85,,,,,,,4,8,2.25,4.5,90511
+    149,44.863316,18.453932,42000,279,275,335,,,,,,,275,335,,,,,,,4,8,2.25,4.5,90511
+    150,44.812317,18.487831,42000,250.7,65,165,175,235,,,,,65,165,175,235,,,,,4,8,2.25,4.5,90511
+    151,44.81629,18.439781,42000,279.2,275,325,335,375,35,145,,,275,325,335,375,35,145,,,4,8,2.25,4.5,90511
+    152,44.82171,18.35226,42000,357.2,85,95,,,,,,,85,95,,,,,,,4,8,2.25,4.5,90511
+    153,44.798725,17.860455,42000,260.3,215,235,,,,,,,215,235,,,,,,,4,8,2.25,4.5,90526
+    154,44.745056,17.813056,42000,1,285,315,45,85,,,,,285,315,45,85,,,,,4,8,2.25,4.5,90526
+    156,44.767633,17.922519,42000,1,95,125,255,265,,,,,95,125,255,265,,,,,4,8,2.25,4.5,90509
+    159,44.662472,18.128694,42000,1,325,345,,,,,,,325,345,,,,,,,4,8,2.25,4.5,90509
+    183,44.57194,19.062815,42000,373,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90517
+    184,44.566956,19.133589,42000,335.9,55,175,,,,,,,55,175,,,,,,,4,8,2.25,4.5,90517
+    186,44.480186,19.025019,42000,361,55,135,305,325,,,,,55,135,305,325,,,,,4,8,2.25,4.5,90517
+    187,44.465584,19.091494,42000,310.5,5,185,,,,,,,5,185,,,,,,,4,8,2.25,4.5,90517
+    188,44.43831,19.035934,42000,415.2,95,145,,,,,,,95,145,,,,,,,4,8,2.25,4.5,90517
+    189,44.396797,19.081415,42000,271.3,35,135,285,325,,,,,35,135,285,325,,,,,4,8,2.25,4.5,90517
+    190,44.373802,19.019811,42000,490.3,55,105,275,315,,,,,55,105,275,315,,,,,4,8,2.25,4.5,90517
+    191,44.335954,18.987238,42000,414.5,95,125,,,,,,,95,125,,,,,,,4,8,2.25,4.5,90517
+    193,44.999653,18.070015,42000,209,145,165,255,265,335,025,,,,,,,,,,,4,8,2.25,4.5,90508
+    196,44.880894,17.965502,42000,299.2,75,195,205,225,295,325,,,75,195,205,225,295,325,,,4,8,2.25,4.5,90508
+    198,44.602775,18.399942,42000,1,45,185,305,35,,,,,45,185,305,35,,,,,4,8,2.25,4.5,90520
+    199,44.64202,18.313943,42000,1,45,105,335,5,,,,,45,105,335,5,,,,,4,8,2.25,4.5,90520
+    200,44.75183,18.902086,42000,151.5,235,255,125,145,,,,,235,255,125,145,,,,,4,8,2.25,4.5,90525
+    202,44.649765,18.819029,42000,341.8,75,155,355,5,,,,,75,155,355,5,,,,,4,8,2.25,4.5,90525
+    203,44.620027,18.883350,42000,1,5,45,155,255,275,305,,,5,45,155,255,275,305,,,4,8,2.25,4.5,90525
+    205,44.7036,18.938698,42000,240,95,135,335,355,,,,,95,135,335,355,,,,,4,8,2.25,4.5,90524
+    206,44.64332,18.956656,42000,380.7,5,45,,,,,,,5,45,,,,,,,4,8,2.25,4.5,90524
+    207,44.62716,19.038095,42000,385.2,75,95,205,255,305,355,,,,,,,,,,,4,8,2.25,4.5,90524
+    208,44.769951,18.455441,42000,1,95,135,145,185,295,315,335,45,95,135,145,185,295,315,335,45,4,8,2.25,4.5,90511
+    209,44.898728,18.523579,42000,1,245,285,305,35,,,,,245,285,305,35,,,,,4,8,2.25,4.5,90511
+    211,44.7775,18.601273,42000,379.1,285,315,155,175,,,,,285,315,155,175,,,,,4,8,2.25,4.5,90515
+    212,44.829426,18.814176,42000,1,305,75,,,,,,,305,75,,,,,,,4,8,2.25,4.5,90515
+    213,44.77032,18.803582,42000,1,335,25,155,175,,,,,335,25,155,175,,,,,4,8,2.25,4.5,90515
+    214,44.837016,18.959652,42000,1,275,65,,,,,,,275,65,,,,,,,4,8,2.25,4.5,90515
+    215,44.808658,18.89075,42000,1,325,65,,,,,,,325,65,,,,,,,4,8,2.25,4.5,90515
+    216,44.856037,18.614680,42000,1,55,115,,,,,,,,,,,,,,,4,8,2.25,4.5,90515
+    219,44.103806,19.125870,42000,1,175,275,325,345,,,,,,,,,,,,,4,8,2.25,4.5,90533
+    221,44.168507,19.216888,42000,1,75,85,,,,,,,75,85,,,,,,,4,8,2.25,4.5,90522
+    223,44.128722,19.325,42000,1,355,15,205,225,,,,,355,15,205,225,,,,,4,8,2.25,4.5,90522
+    229,44.018417,19.573583,42000,1,355,205,,,,,,,355,205,,,,,,,4,8,2.25,4.5,90522
+    234,44.498352,17.087317,42000,1,55,95,170,190,,,,,,,,,,,,,4,8,2.25,4.5,90532
+    235,44.453751,16.945665,42000,1,100,120,265,355,,,,,,,,,,,,,4,8,2.25,4.5,90532
+    236,44.432331,17.062187,42000,1,105,195,235,255,265,285,,,,,,,,,,,4,8,2.25,4.5,90532
+    237,44.439754,17.142784,42000,1,80,130,225,260,,,,,,,,,,,,,4,8,2.25,4.5,90532
+    238,44.413750,16.988605,42000,1,130,225,,,,,,,,,,,,,,,4,8,2.25,4.5,90532
+    239,44.327633,16.952002,42000,1,230,255,,,,,,,,,,,,,,,4,8,2.25,4.5,90532
+    241,44.325619,17.043184,42000,1,135,155,285,45,,,,,,,,,,,,,4,8,2.25,4.5,90534
+    242,44.270073,17.117308,42000,1,255,5,,,,,,,,,,,,,,,4,8,2.25,4.5,90534
+    243,44.232510,17.090908,42000,1,205,305,345,15,,,,,,,,,,,,,4,8,2.25,4.5,90534
+    244,44.187065,17.194645,42000,1,285,15,195,225,,,,,,,,,,,,,4,8,2.25,4.5,90534
+    245,44.612988,17.258018,42000,1,345,25,75,95,275,305,,,,,,,,,,,4,8,2.25,4.5,90535
+    246,44.554314,17.321270,42000,1,15,35,145,155,,,,,,,,,,,,,4,8,2.25,4.5,90535
+    247,44.463932,17.350882,42000,1,15,55,185,195,,,,,,,,,,,,,4,8,2.25,4.5,90535
+    248,44.462284,17.422861,42000,1,225,265,295,315,,,,,,,,,,,,,4,8,2.25,4.5,90535
+    249,44.408218,17.463243,42000,1,165,195,225,265,, ,,,,,,,,,,,4,8,2.25,4.5,90535
+    270,44.701832,18.392893,42000,1,35,95,165,205,245,285,,,,,,,,,,,4,8,2.25,4.5,90537
+    271,44.746689,18.449495,42000,1,55,155,345,355,,,,,,,,,,,,,4,8,2.25,4.5,90537
+    272,44.754391,18.527164,42000,1,105,115,175,285,,,,,,,,,,,,,4,8,2.25,4.5,90537
+    273,44.704777,18.551844,42000,1,155,185,235,285,,,,,,,,,,,,,4,8,2.25,4.5,90537
+    274,44.651035,18.484066,42000,1,355,75,95,115,125,195,235,265,,,,,,,,,4,8,2.25,4.5,90537
+    275,44.653923,18.575361,42000,1,135,265,275,285,295,315,,,,,,,,,,,4,8,2.25,4.5,90537
+    276,44.681728,18.674854,42000,1,45,75,95,115,,,,,,,,,,,,,4,8,2.25,4.5,90536
+    277,44.737751,18.713470,42000,1,35,65,75,125,305,355,,,,,,,,,,,4,8,2.25,4.5,90536
+    278,44.726978,18.810772,42000,1,325,205,265,275,,,,,,,,,,,,,4,8,2.25,4.5,90536
+    279,44.643009,18.452751,42000,1,15,65,85,105,155,215,225,305,,,,,,,,,4,8,2.25,4.5,90538
+    280,44.585461,18.467285,42000,1,35,75,95,215,245,315,,,,,,,,,,,4,8,2.25,4.5,90538
+    281,44.560226,18.544107,42000,1,25,305,,,,,,,,,,,,,,,4,8,2.25,4.5,90538
+    282,44.560589,18.337427,42000,1,355,45,155,185,,,,,,,,,,,,,4,8,2.25,4.5,90538
+    283,44.536621,18.428737,42000,1,25,145,185,205,345,355,,,,,,,,,,,4,8,2.25,4.5,90538
+    284,44.495480,18.439415,42000,1,5,75,105,135,165,175,,,,,,,,,,,4,8,2.25,4.5,90538
+    285,44.595783,18.992931,42000,1,245,285,295,325,345,5,,,,,,,,,,,4,8,2.25,4.5,90711
+    286,44.528664,18.966391,42000,1,355,25,115,155,,,,,,,,,,,,,4,8,2.25,4.5,90710
+    287,44.469807,18.977842,42000,1,25,95,205,265,,,,,,,,,,,,,4,8,2.25,4.5,90710
+    288,44.478596,18.777863,42000,1,35,55,75,145,205,275,305,355,,,,,,,,,4,8,2.25,4.5,90709
+    289,44.445633,18.776543,42000,1,245,115,,,,,,,,,,,,,,,4,8,2.25,4.5,90709
+    290,44.474499,18.824846,42000,1,105,345,,,,,,,,,,,,,,,4,8,2.25,4.5,90709
+    291,44.502980,18.866087,42000,1,145,315,,,,,,,,,,,,,,,4,8,2.25,4.5,90709
+    292,44.426319,18.871492,42000,1,285,95,,,,,,,,,,,,,,,4,8,2.25,4.5,90709
+    293,44.464090,18.911295,42000,1,45,75,175,295,,,,,,,,,,,,,4,8,2.25,4.5,90709
+    BOR,44.583271,17.606093,52000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90000
+    JAH,43.720148,18.561821,52000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90000
+    BNX,44.941845,17.297423,52000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90000
+    TZL,44.459273,18.722256,52000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90000
+    DBV,42.561441,18.263685,52000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90000
+    100,44.772365,18.978431,42000,1,165,215,15,55,,,,,165,215,15,55,,,,,4,8,2.25,4.5,90516
+    101,44.809494,19.005292,42000,1,295,45,,,,,,,295,45,,,,,,,4,8,2.25,4.5,90516
+    102,44.827981,19.070394,42000,1,55,75,255,25,155,225,,,55,75,255,25,155,225,,,4,8,2.25,4.5,90516
+    103,44.802146,19.130123,42000,1,85,155,,,,,,,85,155,,,,,,,4,8,2.25,4.5,90516
+    104,44.856121,19.123883,42000,1,265,25,85,205,,,,,265,25,85,205,,,,,4,8,2.25,4.5,90516
+    105,44.861291,19.19679,42000,1,275,35,155,195,,,,,275,35,155,195,,,,,4,8,2.25,4.5,90516
+    106,44.874046,19.272198,42000,1,305,75,125,235,,,,,305,75,125,235,,,,,4,8,2.25,4.5,90516
+    107,44.859133,19.322402,42000,1,315,175,215,225,,,,,315,175,215,225,,,,,4,8,2.25,4.5,90516
+    108,44.73564,19.018054,42000,1,155,235,,,,,,,155,235,,,,,,,4,8,2.25,4.5,90516
+    109,44.772524,19.070068,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90516
+    110,44.8261,19.217533,42000,1,25,55,165,205,255,285,305,355,25,55,165,205,255,285,305,355,4,8,2.25,4.5,90516
+    111,44.814421,19.282611,42000,1,205,265,45,145,,,,,205,265,45,145,,,,,4,8,2.25,4.5,90516
+    112,44.776527,19.181436,42000,1,55,205,,,,,,,55,205,,,,,,,4,8,2.25,4.5,90516
+    113,44.613955,19.136430,42000,260.8,65,155,265,275,,,,,65,155,265,275,,,,,4,8,2.25,4.5,90516
+    114,44.732534,19.131954,42000,1,35,85,,,,,,,35,85,,,,,,,4,8,2.25,4.5,90516
+    115,44.686417,19.266691,42000,168.9,205,235,315,345,35,195,,,205,235,315,345,35,195,,,4,8,2.25,4.5,90516
+    116,44.641083,19.153967,42000,200.7,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90516
+    117,44.764867,19.27461,42000,1,35,195,235,295,,,,,35,175,235,295,,,,,4,8,2.25,4.5,90516
+    118,44.736516,19.319835,42000,1,265,305,15,205,,,,,265,305,15,205,,,,,4,8,2.25,4.5,90516
+    119,44.731201,19.247542,42000,1,235,355,55,155,,,,,235,355,55,155,,,,,4,8,2.25,4.5,90516
+    120,44.70898,19.189398,42000,1,355,45,,,,,,,355,45,,,,,,,4,8,2.25,4.5,90516
+    121,44.699717,19.082018,42000,1,105,145,45,75,,,,,105,145,45,75,,,,,4,8,2.25,4.5,90516
+    122,44.676836,19.15275,42000,1,5,55,85,115,,,,,5,55,85,115,,,,,4,8,2.25,4.5,90516
+    123,44.64784,19.210196,42000,127.5,345,15,35,195,,,,,345,15,35,195,,,,,4,8,2.25,4.5,90516
+    177,44.234562,19.140619,42000,1,275,315,355,65,,,,,275,315,355,65,,,,,4,8,2.25,4.5,90518
+    178,44.218566,19.233353,42000,1,325,125,,,,,,,325,125,,,,,,,4,8,2.25,4.5,90518
+    179,44.174133,19.305790,42000,1,5,105,,,,,,,5,105,,,,,,,4,8,2.25,4.5,90518
+    180,44.141517,19.419267,42000,1,275,135,,,,,,,275,135,,,,,,,4,8,2.25,4.5,90518
+    182,44.077557,19.519327,42000,1,265,125,,,,,,,265,125,,,,,,,4,8,2.25,4.5,90518
+    TR01,42.645819,18.315475,42000,1,335,45,135,275,,,,,335,45,135,275,,,,,4,8,2.25,4.5,90527
+    TR02,42.646724,18.402011,42000,1,165,245,305,355,,,,,165,245,305,355,,,,,4,8,2.25,4.5,90527
+    TR03,42.692690,18.264750,42000,1,139,264,34,89,,,,,,,,,,,,,4,8,2.25,4.5,90527
+    TR04,42.747565,18.423634,42000,1,220,255,20,104,,,,,220,255,20,104,,,,,4,8,2.25,4.5,90527
+    TR05,42.7563562,18.2235155,42000,1,,,105,145,,,,,,,105,145,,,,,4,8,2.25,4.5,90527
+    TR06,42.7643586,18.1407271,42000,1,175,260,,,,,,,175,260,,,,,,,4,8,2.25,4.5,90527
+    TR07,42.774822,18.3442239,42000,1,148,218,,,,,,,148,218,,,,,,,4,8,2.25,4.5,90527
+    TR08,42.822101,18.295335,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90527
+    TR09,42.834314,18.098912,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90527
+    TR10,42.8552629,18.0432358,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90527
+    PD01,44.818501,16.909657,42000,362,37,51,65,105,144,163,341,6,65,105,144,163,,,,,4,8,2.25,4.5,90505
+    PD02,44.839169,16.831924,42000,292,31,50,119,132,,,,,,,,,,,,,4,8,2.25,4.5,90505
+    PD03,44.866993,16.737854,42000,1,100,150,263,289,328,363,,,100,150,263,289,,,,,4,8,2.25,4.5,90505
+    PD04,44.871586,16.935297,42000,1,87,108,215,248,291,325,,,87,108,291,325,,,,,4,8,2.25,4.5,90505
+    PD05,44.902359,16.866224,42000,1,87,140,185,205,331,357,,,87,108,185,205,,,,,4,8,2.25,4.5,90505
+    PD06,44.908237,16.634165,42000,492,5,100,269,348,,,,,12,100,269,348,,,,,4,8,2.25,4.5,90505
+    PD07,44.928238,16.712160,42000,1,315,83,,,,,,,315,83,,,,,,,4,8,2.25,4.5,90505
+    PD08,44.933769,16.971363,42000,1,98,130,222,241,245,308,,,100,130,222,241,245,308,,,4,8,2.25,4.5,90505
+    PD09,44.944832,16.575573,42000,1,30,116,135,150,,,,,77,116,135,150,,,,,4,8,2.25,4.5,90505
+    PD10,44.960514,16.815432,42000,1,1,107,130,150,257,307,,,1,107,269,307,,,,,4,8,2.25,4.5,90505
+    PD11,44.965511,16.891449,42000,1,44,79,123,144,220,305,,,,,,,,,,,4,8,2.25,4.5,90505
+    PD12,45.000366,16.614502,42000,244,60,145,178,260,,,,,60,145,178,260,,,,,4,8,2.25,4.5,90505
+    PD13,45.014469,16.710430,42000,1,114,270,,,,,,,114,270,,,,,,,4,8,2.25,4.5,90505
+    PD14,45.022198,16.794815,42000,1,122,261,,,,,,,122,170,185,255,,,,,4,8,2.25,4.5,90505
+    PD15,45.055958,16.633951,42000,407,23,37,120,175,204,225,248,263,23,37,145,170,204,225,,,4,8,2.25,4.5,90505
+    NG01,44.934330,16.371929,42000,1,60,220,,,,,,,60,220,,,,,,,4,8,2.25,4.5,90529
+    NG02,44.941883,16.268085,42000,1,218,261,276,305,310,78,,,276,305,310,349,351,78,,,4,8,2.25,4.5,90529
+    NG03,44.951408,16.486834,42000,1,91,119,161,204,341,359,,,161,204,213,239,261,320,,,4,8,2.25,4.5,90529
+    NG04,44.982941,16.298176,42000,1,82,103,243,282,299,74,,,299,74,82,103,261,282,,,4,8,2.25,4.5,90529
+    NG05,44.992786,16.391773,42000,1,42,60,91,134,145,162,267,14,267,14,42,60,91,131,,,4,8,2.25,4.5,90529
+    NG06,45.024334,16.500267,42000,1,87,107,272,316,,,,,52,89,276,312,,,,,4,8,2.25,4.5,90529
+    NG07,45.071177,16.552149,42000,1,59,80,122,139,230,248,265,334,265,334,,,,,,,4,8,2.25,4.5,90529
+    NG08,45.076473,16.454542,42000,1,115,130,164,182,219,21,,,224,8,164,188,,,,,4,8,2.25,4.5,90529
+    NG09,45.128170,16.474417,42000,1,45,87,178,191,209,25,,,234,25,45,87,,,,,4,8,2.25,4.5,90529
+    OL01,44.858551,16.661821,42000,1,5,35,66,127,149,271,318,348,66,127,149,271,,,,,4,8,2.25,4.5,90521
+    OL02,44.886986,16.467924,42000,1,134,158,324,6,,,,,324,344,,,,,,,4,8,2.25,4.5,90521
+    KD01,45.085717,16.958667,42000,1,100,130,186,215,,,,,186,215,,,,,,,4,8,2.25,4.5,90504
+    KD02,45.097020,16.727776,42000,1,20,49,67,100,272,296,,,67,100,272,296,,,,,4,8,2.25,4.5,90504
+    KD03,45.114846,16.809483,42000,1,258,272,324,22,,,,,348,17,,,,,,,4,8,2.25,4.5,90504
+    KD04,45.119883,16.618717,42000,1,36,74,96,140,,,,,36,74,96,139,,,,,4,8,2.25,4.5,90504
+    KD05,45.127442,16.891153,42000,1,296,342,,,,,,,,,,,,,,,4,8,2.25,4.5,90504
+    KD06,45.159606,16.713081,42000,1,199,215,310,90,,,,,199,215,310,82,,,,,4,8,2.25,4.5,90504
+    KD07,45.180714,16.780042,42000,1,190,130,,,,,,,190,130,,,,,,,4,8,2.25,4.5,90504
+    KD08,45.194139,16.864000,42000,1,224,36,46,74,,,,,224,24,46,74,,,,,4,8,2.25,4.5,90504
+    KD09,45.202972,16.650583,42000,1,273,109,175,200,,,,,283,109,175,200,,,,,4,8,2.25,4.5,90504
+    KD10,45.219125,16.943017,42000,1,127,174,235,117,,,,,233,117,127,174,,,,,4,8,2.25,4.5,90504
+    KO01,45.170452,16.558434,42000,344,238,80,,,,,,,252,27,,,,,,,4,8,2.25,4.5,90528
+    KR01,44.879879,16.312523,42000,1,170,210,,,,,,,170,210,,,,,,,4,8,2.25,4.5,90530
+    BL01,44.564018,17.168524,42000,1,30,65,,,,,,,30,65,,,,,,,4,8,2.25,4.5,90506
+    BL02,44.589300,16.974050,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL03,44.632170,17.158150,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL04,44.661381,17.078274,42000,1,27,45,305,345,,,,,305,345,,,,,,,4,8,2.25,4.5,90506
+    BL05,44.663290,16.937620,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL06,44.692665,17.158001,42000,1,349,98,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL07,44.723885,17.062384,42000,1,22,90,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL08,44.728697,16.971148,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL09,44.768612,17.125031,42000,1,338,158,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL10,44.762665,16.903946,42000,1,25,53,201,234,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL11,44.774417,17.026917,42000,1,67,117,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL12,44.775810,16.803154,42000,1,238,278,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL13,44.819889,17.163667,42000,1,336,224,,,,,,,336,224,,,,,,,4,8,2.25,4.5,90506
+    BL14,44.838556,16.994556,42000,1,302,312,,,,,,,,,,,,,,,4,8,2.25,4.5,90506
+    BL15,44.856694,17.070333,42000,1,81,155,,,,,,,71,155,348,9,,,,,4,8,2.25,4.5,90506
+    BL16,44.912090,17.115660,42000,1,,,,,,,,,130,165,256,284,,,,,4,8,2.25,4.5,90506
+    BL17,44.911602,17.040661,42000,1,,,,,,,,,70,114,180,234,,,,,4,8,2.25,4.5,90506
+    PR01,44.740326,17.674053,42000,1,73,88,212,244,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR02,44.783733,17.568501,42000,1,170,199,,,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR03,44.799019,17.735512,42000,1,121,187,304,344,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR04,44.825691,17.477699,42000,1,122,179,276,349,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR05,44.841404,17.664286,42000,1,302,69,,,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR06,44.849537,17.585176,42000,1,308,15,41,98,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR07,44.864990,17.754492,42000,1,1,22,235,290,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR08,44.891068,17.501934,42000,1,93,130,185,231,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR09,44.897110,17.671173,42000,1,136,278,,,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR10,44.906574,17.603622,42000,1,118,164,223,283,313,360,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR11,44.926353,17.745235,42000,1,25,75,151,244,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR12,44.949284,17.678751,42000,1,163,233,334,358,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    PR13,44.983551,17.749130,42000,1,80,96,180,325,,,,,,,,,,,,,4,8,2.25,4.5,90507
+    BI01,42.925040,18.434810,42000,1,30,198,202,220,,,,,,,,,,,,,4,8,2.25,4.5,90539
+    BI02,42.977820,18.399380,42000,1,60,138,,,,,,,,,,,,,,,4,8,2.25,4.5,90539
+    BI03,43.017030,18.292910,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90539
+    BE01,43.075880,18.193840,42000,1,291,322,,,,,,,,,,,,,,,4,8,2.25,4.5,90544
+    BE02,43.135938,18.104069,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90544
+    GA01,43.079000,18.607550,42000,1,18,230,324,342,,,,,,,,,,,,,4,8,2.25,4.5,90541
+    GA02,43.116830,18.525530,42000,1,63,109,146,188,340,29,,,,,,,,,,,4,8,2.25,4.5,90541
+    GA03,43.181490,18.462440,42000,1,88,120,,,,,,,,,,,,,,,4,8,2.25,4.5,90541
+    NV01,43.190150,18.199810,42000,1,307,331,,,,,,,,,,,,,,,4,8,2.25,4.5,90542
+    NV02,43.193740,18.091460,42000,1,4,41,,,,,,,,,,,,,,,4,8,2.25,4.5,90542
+    NV03,43.251510,18.175440,42000,1,72,85,243,303,,,,,,,,,,,,,4,8,2.25,4.5,90542
+    NV04,43.283720,18.129320,42000,1,125,240,,,,,,,,,,,,,,,4,8,2.25,4.5,90542
+    NV05,43.350560,18.107400,42000,1,76,185,,,,,,,,,,,,,,,4,8,2.25,4.5,90542
+    LJ01,42.934460,18.129620,42000,1,280,310,,,,,,,,,,,,,,,4,8,2.25,4.5,90540
+    LJ02,42.972360,18.038110,42000,1,105,130,,,,,,,,,,,,,,,4,8,2.25,4.5,90540
+    LJ03,42.999910,18.121900,42000,1,191,223,273,298,,,,,,,,,,,,,4,8,2.25,4.5,90540
+    SR01,44.970524,17.504723,42000,1,107,169,,,,,,,110,160,,,,,,,4,8,2.25,4.5,90503
+    SR02,44.975193,17.588924,42000,1,,,,,,,,,105,120,,,,,,,4,8,2.25,4.5,90503
+    SR03,45.018353,17.666637,42000,1,310,017,,,,,,,310,12,175,195,280,290,,,4,8,2.25,4.5,90503
+    SR04,45.022594,17.461199,42000,1,15,45,,,,,,,123,175,296,007,218,230,,,4,8,2.25,4.5,90503
+    SR05,45.035185,17.583441,42000,1,359,40,260,332,,,,,359,40,260,332,,,,,4,8,2.25,4.5,90503
+    SR06,45.068100,17.778340,42000,1,280,122,,,,,,,300,122,,,,,,,4,8,2.25,4.5,90503
+    SR07,45.074368,17.521740,42000,1,317,30,127,143,206,288,,,317,47,127,143,206,288,,,4,8,2.25,4.5,90503
+    SR08,45.103249,17.585030,42000,1,232,99,185,198,,,,,232,99,185,198,,,,,4,8,2.25,4.5,90503
+    SR09,45.109104,17.469757,42000,1,291,139,,,,,,,291,139,,,,,,,4,8,2.25,4.5,90503
+    CE01,44.657959,17.276033,42000,1,298,5,15,42,104,129,190,255,310,5,190,255,80,110,,,4,8,2.25,4.5,90531
+    CE02,44.686123,17.365017,42000,1,160,210,285,345,,,,,160,210,285,345,,,,,4,8,2.25,4.5,90531
+    CE03,44.726612,17.540718,42000,1,25,49,,,,,,,25,65,,,,,,,4,8,2.25,4.5,90531
+    CE04,44.745319,17.302721,42000,1,118,170,268,329,,,,,80,170,235,320,,,,,4,8,2.25,4.5,90531
+    CE05,44.747810,17.393021,42000,1,175,215,225,280,,,,,175,215,225,275,,,,,4,8,2.25,4.5,90531
+    CE06,44.765900,17.474009,42000,1,115,145,250,275,,,,,115,145,250,275,,,,,4,8,2.25,4.5,90531
+    GD01,44.999199,17.064537,42000,574,70,90,170,190,340,360,,,70,90,340,360,,,,,4,8,2.25,4.5,90501
+    GD02,45.002205,17.382334,42000,1,189,236,,,,,,,20,45,186,260,280,310,,,4,8,2.25,4.5,90501
+    GD03,45.010445,17.152796,42000,183,101,150,200,240,290,310,,,101,150,200,240,,,,,4,8,2.25,4.5,90501
+    GD04,45.011868,17.228933,42000,1,22,93,116,162,336,349,,,43,93,136,162,336,349,,,4,8,2.25,4.5,90501
+    GD05,45.032589,17.339035,42000,1,185,218,,,265,9,,,185,218,,,265,9,,,4,8,2.25,4.5,90501
+    GD06,45.053717,17.397558,42000,1,330,10,,,,,,,258,283,,,,,,,4,8,2.25,4.5,90501
+    GD07,45.054470,17.060213,42000,199,120,140,240,340,,,,,240,340,,,,,,,4,8,2.25,4.5,90501
+    GD08,45.067917,17.141462,42000,1,6,61,128,140,168,182,250,270,22,115,167,182,291,307,,,4,8,2.25,4.5,90501
+    GD09,45.102081,17.211794,42000,1,312,75,115,140,165,188,,,295,105,172,188,,,,,4,8,2.25,4.5,90501
+    GD10,45.097931,17.303706,42000,1,294,69,166,189,,,,,10,60,144,208,286,355,,,4,8,2.25,4.5,90501
+    GD11,45.118471,17.084126,42000,224,147,174,194,211,324,100,,,2,59,147,174,194,211,,,4,8,2.25,4.5,90501
+    GD12,45.120710,17.376086,42000,1,312,96,272,300,,,,,308,90,223,280,,,,,4,8,2.25,4.5,90501
+    GD13,45.119022,17.007961,42000,226,110,130,140,180,,,,,,,,,,,,,4,8,2.25,4.5,90501
+    GD14,45.121918,17.172075,42000,152,148,166,221,245,309,124,,,319,132,147,163,221,245,,,4,8,2.25,4.5,90501
+    GD15,45.169225,17.113403,42000,1,300,118,,,,,,,288,121,132,142,,,,,4,8,2.25,4.5,90501
+    GD17,45.058430,17.269131,42000,1,334,7,80,140,,,,,350,60,80,150,,,,,4,8,2.25,4.5,90501
+    LA01,44.792425,17.319894,42000,1,164,190,220,359,,,,,176,190,201,285,325,347,,,4,8,2.25,4.5,90502
+    LA02,44.812311,17.389103,42000,1,196,218,274,289,299,323,,,196,218,274,289,299,323,,,4,8,2.25,4.5,90502
+    LA03,44.839839,17.289981,42000,1,190,21,124,179,,,,,210,21,124,179,,,,,4,8,2.25,4.5,90502
+    LA04,44.875922,17.421233,42000,1,106,159,254,313,,,,,81,159,280,310,,,,,4,8,2.25,4.5,90502
+    LA05,44.898044,17.199706,42000,1,35,232,,,,,,,78,232,266,283,,,,,4,8,2.25,4.5,90502
+    LA06,44.899706,17.333636,42000,1,191,204,215,340,,,,,113,129,215,340,,,,,4,8,2.25,4.5,90502
+    LA07,44.924606,17.254825,42000,1,4,23,37,233,,,,,4,23,37,207,,,,,4,8,2.25,4.5,90502
+    LA08,44.947825,17.192786,42000,1,76,204,,,,,,,73,92,,,,,,,4,8,2.25,4.5,90502
+    LA09,44.953444,17.365042,42000,1,205,277,,,,,,,205,277,,,,,,,4,8,2.25,4.5,90502
+    LA10,44.978328,17.301469,42000,1,357,17,130,198,211,235,,,1,17,130,198,211,235,,,4,8,2.25,4.5,90502
+    BR01,45.009370,18.120650,42000,1,335,43,145,185,,,,,145,185,,,,,,,4,8,2.25,4.5,90506
+    BR02,45.032150,17.930490,42000,1,277,30,85,120,151,234,,,277,5,85,120,151,234,,,4,8,2.25,4.5,90506
+    BR03,45.101766,18.053480,42000,1,271,104,,,,,,,271,104,,,,,,,4,8,2.25,4.5,90506
+    BR04,45.108841,17.972183,42000,1,227,104,,,,,,,227,104,,,,,,,4,8,2.25,4.5,90506
+    DE03,44.905670,17.841300,42000,1,3,49,,,,,,,,,,,,,,,4,8,2.25,4.5,90542
+    DE04,44.907436,17.934374,42000,1,325,15,,,,,,,328,4,,,,,,,4,8,2.25,4.5,90542
+    DE05,44.909550,18.033630,42000,1,57,74,126,148,155,172,,,57,74,155,172,,,,,4,8,2.25,4.5,90542
+    DE06,44.957416,17.904039,42000,1,260,130,,,,,,,260,130,,,,,,,4,8,2.25,4.5,90542
+    DE07,44.962429,18.068115,42000,1,107,143,195,235,276,294,,,107,143,195,235,,,,,4,8,2.25,4.5,90542
+    DE08,44.969597,17.837671,42000,1,32,98,351,19,,,,,32,109,,,,,,,4,8,2.25,4.5,90542
+    DE09,44.986423,17.989603,42000,1,233,283,331,6,,,,,233,283,331,6,,,,,4,8,2.25,4.5,90542
+    DE10,45.023940,18.027700,42000,1,223,256,287,314,,,,,223,243,,,,,,,4,8,2.25,4.5,90542
+    DE11,45.030250,17.827350,42000,1,311,70,112,146,,,,,325,70,123,162,,,,,4,8,2.25,4.5,90542
+    KV01,44.541230,17.523940,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90600
+    KV02,44.571490,17.418850,42000,1,88,101,189,211,315,343,,,315,343,,,,,,,4,8,2.25,4.5,90600
+    KV03,44.629020,17.337600,42000,1,345,39,57,135,,,,,57,135,,,,,,,4,8,2.25,4.5,90600
+    TE01,44.568920,17.860150,42000,1,257,45,,,,,,,280,45,,,,,,,4,8,2.25,4.5,90601
+    TE03,44.618180,17.676290,42000,1,65,197,,,,,,,65,197,,,,,,,4,8,2.25,4.5,90601
+    TE05,44.678470,17.588840,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90601
+    TE06,44.683073,17.686445,42000,1,18,31,41,53,78,93,149,199,78,93,,,,,,,4,8,2.25,4.5,90601
+    ST01,44.704468,17.846439,42000,1,309,012,110,149,168,188,,,309,012,,,,,,,4,8,2.25,4.5,90526
+    ST02,44.753173,17.755599,42000,1,76,99,321,354,,,,,76,99,321,354,,,,,4,8,2.25,4.5,90526
+    DO01,44.629360,18.187060,42000,1,351,59,211,229,251,269,,,251,269,,,,,,,4,8,2.25,4.5,90509
+    DO03,44.690260,18.185720,42000,1,341,95,211,329,,,,,341,99,296,329,,,,,4,8,2.25,4.5,90509
+    DO04,44.737650,17.981070,42000,1,26,77,84,229,,,,,26,77,84,229,,,,,4,8,2.25,4.5,90509
+    DO06,44.814315,18.120539,42000,1,142,158,180,240,,,,,137,153,188,275,,,,,4,8,2.25,4.5,90509
+    DO07,44.840390,18.166650,42000,1,120,200,211,299,,,,,120,200,251,269,,,,,4,8,2.25,4.5,90509
+    SA02,44.954418,18.429230,42000,1,161,199,251,281,292,337,,,161,199,305,337,,,,,4,8,2.25,4.5,90512
+    SA03,44.981500,18.550830,42000,1,3,124,136,159,281,341,,,341,3,39,74,,,,,4,8,2.25,4.5,90512
+    SA05,45.023781,18.416561,42000,1,329,99,213,240,248,280,,,15,99,245,283,,,,,4,8,2.25,4.5,90512
+    ZV01,44.297650,19.091810,42000,1,356,105,155,187,,,,,4,69,155,177,,,,,4,8,2.25,4.5,90517
+    ZV07,44.598036,19.105300,42000,1,85,168,,,,,,,85,150,,,,,,,4,8,2.25,4.5,90517
+    VL01,44.243530,19.001660,42000,1,134,360,,,,,,,160,360,,,,,,,4,8,2.25,4.5,90700
+    VL02,44.225784,18.918624,42000,1,137,175,316,338,,,,,137,175,,,,,,,4,8,2.25,4.5,90700
+    MI01,44.129850,19.076370,42000,1,316,68,,,,,,,316,68,,,,,,,4,8,2.25,4.5,90533
+    MI02,44.166060,19.145338,42000,1,252,348,,,,,,,252,337,,,,,,,4,8,2.25,4.5,90533
+    MI03,44.211560,19.080970,42000,1,15,38,170,205,245,260,,,15,38,160,202,,,,,4,8,2.25,4.5,90533
+    SC01,43.988885,19.507039,42000,1,66,259,,,,,,,66,245,,,,,,,4,8,2.25,4.5,90522
+    SC02,44.019970,19.316040,42000,1,122,15,,,,,,,144,15,,,,,,,4,8,2.25,4.5,90522
+    SC03,44.028540,19.424720,42000,1,21,61,138,216,,,,,181,198,,,,,,,4,8,2.25,4.5,90522
+    SC04,44.055400,19.362890,42000,1,153,166,311,323,,,,,,,,,,,,,4,8,2.25,4.5,90522
+    SC05,44.100168,19.177136,42000,1,70,120,306,318,,,,,92,120,,,,,,,4,8,2.25,4.5,90522
+    SC06,44.109030,19.274330,42000,1,15,47,76,122,,,,,15,30,,76,122,,,,4,8,2.25,4.5,90522
+    BC05,44.229700,19.325800,42000,1,250,196,,,,,,,250,196,,,,,,,4,8,2.25,4.5,90518
+    SE01,44.236180,18.815180,42000,1,353,9,19,31,117,124,257,275,353,9,19,31,,,,,4,8,2.25,4.5,90701
+    SE02,44.291240,18.916950,42000,1,265,288,,,,,,,268,288,,,,,,,4,8,2.25,4.5,90701
+    GO01,43.666815,19.040645,42000,1,227,321,,,,,,,232,321,,,,,,,4,8,2.25,4.5,90702
+    CA01,43.570518,19.130375,42000,1,122,209,241,281,,,,,241,281,,,,,,,4,8,2.25,4.5,90703
+    CA02,43.573890,19.038350,42000,1,75,185,295,340,,,,,109,134,,,,,,,4,8,2.25,4.5,90703
+    VG01,43.739436,19.394527,42000,1,339,104,239,257,280,313,,,1,89,239,257,,,,,4,8,2.25,4.5,90704
+    VG02,43.753340,19.287580,42000,1,350,29,141,169,,,,,350,29,141,169,,,,,4,8,2.25,4.5,90704
+    VG03,43.753297,19.174676,42000,1,54,92,166,193,,,,,166,193,,,,,,,4,8,2.25,4.5,90704
+    VG04,43.802025,19.257704,42000,1,26,158,,,,,,,57,158,,,,,,,4,8,2.25,4.5,90704
+    VG05,43.826143,19.362599,42000,1,336,155,212,248,,,,,336,155,217,248,,,,,4,8,2.25,4.5,90704
+    VG06,43.870983,19.287462,42000,1,300,124,151,186,,,,,300,15,151,186,,,,,4,8,2.25,4.5,90704
+    RO03,43.892632,19.071404,42000,1,197,225,247,335,,,,,247,335,,,,,,,4,8,2.25,4.5,90705
+    RO04,43.972391,19.141850,42000,1,340,35,86,99,,,,,340,35,,,,,,,4,8,2.25,4.5,90705
+    HP01,44.049381,18.915891,42000,1,21,54,,,,,,,21,54,,,,,,,4,8,2.25,4.5,90706
+    SO02,43.927520,18.949930,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90707
+    RU01,43.639590,19.426170,42000,1,44,251,,,,,,,91,139,213,251,,,,,4,8,2.25,4.5,90708
+    RU02,43.641350,19.195800,42000,1,,,,,,,,,,,,,,,,,4,8,2.25,4.5,90708
+    RU03,43.678462,19.308540,42000,1,35,204,,,,,,,35,139,,,,,,,4,8,2.25,4.5,90708
+    RU04,43.678462,19.464788,42000,1,1,75,92,114,187,237,,,151,164,,,,,,,4,8,2.25,4.5,90708
+    MO01,44.880950,18.205020,42000,1,326,16,24,61,231,247,301,319,341,16,301,319,,,,,4,8,2.25,4.5,90510
+    MO02,44.890050,18.278550,42000,1,346,113,,,,,,,9,83,,,,,,,4,8,2.25,4.5,90510
+    MO03,44.910720,18.142110,42000,1,191,233,303,349,,,,,191,209,,,,,,,4,8,2.25,4.5,90510
+    MO04,44.981826,18.360548,42000,1,46,94,236,254,,,,,46,94,236,254,,,,,4,8,2.25,4.5,90510
+    MO05,44.950480,18.166090,42000,1,37,53,131,165,205,279,302,339,37,53,205,279,302,339,,,4,8,2.25,4.5,90510
+    VU01,45.020760,18.256628,42000,1,1,39,76,119,131,174,311,342,15,30,76,119,143,179,,,4,8,2.25,4.5,90523
+    PE01,44.857723,18.538517,42000,1,132,192,204,219,271,309,,,132,192,204,219,,,,,4,8,2.25,4.5,90510
+    PE02,44.884701,18.573551,42000,1,38,64,176,191,,,,,38,64,176,191,,,,,4,8,2.25,4.5,90510
+    PE03,44.928856,18.525919,42000,1,24,56,103,121,136,169,223,272,136,169,,,,,,,4,8,2.25,4.5,90510`;
+
+            // ------------------------------------------------------------
+            // 2. Mapa – OSM France + OpenTopoMap opcija
+            // ------------------------------------------------------------
+            const map = L.map('map').setView([44.4, 17.5], 8);
+            const osmUrl = 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
+            const topoUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+
+            const osmLayer = L.tileLayer(osmUrl, {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap France'
+            }).addTo(map);
+
+            const topoLayer = L.tileLayer(topoUrl, {
+                maxZoom: 17,
+                attribution: '© OpenTopoMap'
+            });
+
+            let mapVisible = true;
+            let topoVisible = false;
+
+            const toggleMapBtn = document.getElementById('toggleMapBtn');
+            toggleMapBtn.addEventListener('click', function() {
+                if (mapVisible) {
+                    map.removeLayer(osmLayer);
+                    mapVisible = false;
+                    this.className = 'map-off';
+                    this.title = 'Prikaži geografsku mapu';
+                } else {
+                    osmLayer.addTo(map);
+                    mapVisible = true;
+                    this.className = 'map-on';
+                    this.title = 'Sakrij geografsku mapu';
+                }
+            });
+
+            const toggleTopoBtn = document.getElementById('toggleTopoBtn');
+            toggleTopoBtn.addEventListener('click', function() {
+                if (topoVisible) {
+                    map.removeLayer(topoLayer);
+                    topoVisible = false;
+                    this.className = 'topo-off';
+                    this.title = 'Prikaži topografsku mapu (OpenTopoMap)';
+                } else {
+                    topoLayer.addTo(map);
+                    topoVisible = true;
+                    this.className = 'topo-on';
+                    this.title = 'Sakrij topografsku mapu';
+                }
+            });
+
+            // ------------------------------------------------------------
+            // 3. Pomoćne funkcije
+            // ------------------------------------------------------------
+            const KM_PER_DEG_LAT = 111.32;
+
+            function destination(lat, lon, bearingDeg, distanceKm) {
+                const br = bearingDeg * Math.PI / 180;
+                const dLat = distanceKm * Math.cos(br) / KM_PER_DEG_LAT;
+                const dLon = distanceKm * Math.sin(br) / (KM_PER_DEG_LAT * Math.cos(lat * Math.PI / 180));
+                return [lat + dLat, lon + dLon];
+            }
+
+            function generateSectorCoords(lat, lon, outerKm, innerKm, startDeg, endDeg, steps = 36) {
+                let start = parseFloat(startDeg);
+                let end = parseFloat(endDeg);
+                if (isNaN(start) || isNaN(end)) return null;
+                if (end < start) end += 360;
+                const coords = [];
+                for (let i = 0; i <= steps; i++) {
+                    const a = start + (end - start) * i / steps;
+                    coords.push(destination(lat, lon, a, outerKm));
+                }
+                coords.push(destination(lat, lon, end, innerKm));
+                for (let i = steps; i >= 0; i--) {
+                    const a = start + (end - start) * i / steps;
+                    coords.push(destination(lat, lon, a, innerKm));
+                }
+                coords.push(destination(lat, lon, start, outerKm));
+                return coords;
+            }
+
+            function bearing(lat1, lon1, lat2, lon2) {
+                const φ1 = lat1 * Math.PI / 180;
+                const φ2 = lat2 * Math.PI / 180;
+                const Δλ = (lon2 - lon1) * Math.PI / 180;
+                const y = Math.sin(Δλ) * Math.cos(φ2);
+                const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+                const θ = Math.atan2(y, x);
+                return (θ * 180 / Math.PI + 360) % 360;
+            }
+
+            function haversine(lat1, lon1, lat2, lon2) {
+                const R = 6371;
+                const φ1 = lat1 * Math.PI / 180;
+                const φ2 = lat2 * Math.PI / 180;
+                const Δφ = (lat2 - lat1) * Math.PI / 180;
+                const Δλ = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            // ------------------------------------------------------------
+            // 4. Funkcija za provjeru tačke u poligonu (Ray casting)
+            // ------------------------------------------------------------
+            function pointInPolygon(lat, lon, polygon) {
+                let coords = polygon;
+                if (typeof polygon.getLatLngs === 'function') {
+                    const rings = polygon.getLatLngs();
+                    if (rings.length === 0) return false;
+                    coords = rings[0];
+                }
+                if (!Array.isArray(coords) || coords.length === 0) return false;
+                let inside = false;
+                const n = coords.length;
+                for (let i = 0, j = n - 1; i < n; j = i++) {
+                    const xi = coords[i].lat;
+                    const yi = coords[i].lng;
+                    const xj = coords[j].lat;
+                    const yj = coords[j].lng;
+                    const intersect = ((yi > lon) !== (yj > lon)) &&
+                        (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi);
+                    if (intersect) inside = !inside;
+                }
+                return inside;
+            }
+
+            // ------------------------------------------------------------
+            // 5. Funkcije za formatiranje vremena HH:MM:SS
+            // ------------------------------------------------------------
+            function formatTimeHHMMSS(date) {
+                if (!date || isNaN(date.getTime())) return '-';
+                const h = String(date.getHours()).padStart(2, '0');
+                const m = String(date.getMinutes()).padStart(2, '0');
+                const s = String(date.getSeconds()).padStart(2, '0');
+                return h + ':' + m + ':' + s;
+            }
+
+            // ------------------------------------------------------------
+            // 6. Slojevi – tačke A i sektori (A markeri povećani za 20%)
+            // ------------------------------------------------------------
+            const aIcon = L.divIcon({
+                className: 'a-marker',
+                html: '<div style="width:6px; height:6px; background:#cc0000; border-radius:50%; border:2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>',
+                iconSize: [10, 10],
+                iconAnchor: [5, 5],
+                popupAnchor: [0, -5]
+            });
+
+            const aSelectedIcon = L.divIcon({
+                className: 'a-selected-marker',
+                html: '<div style="width:10px; height:10px; background:#ffcc00; border-radius:50%; border:2px solid #ff0000; box-shadow: 0 0 8px rgba(255,0,0,0.8);"></div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7],
+                popupAnchor: [0, -6]
+            });
+
+            const markerLayer = L.layerGroup().addTo(map);
+            const pp8Layer = L.layerGroup().addTo(map);
+            const pp6Layer = L.layerGroup().addTo(map);
+
+            // ------------------------------------------------------------
+            // 7. Strukture za sektore
+            // ------------------------------------------------------------
+            const sectorsByA = {};
+            const allSectors = [];
+
+            let filterByA = false;
+            let activeAKey = null;
+            let activeA = null;
+
+            // ------------------------------------------------------------
+            // 8. Funkcija za ažuriranje vidljivosti sektora
+            // ------------------------------------------------------------
+            let currentFilter = 'all';
+            let sectorsVisible = true;
+
+            function updateSectorsVisibility() {
+                pp8Layer.clearLayers();
+                pp6Layer.clearLayers();
+
+                if (!sectorsVisible) {
+                    return;
+                }
+
+                let sectorsToShow = [];
+
+                if (filterByA && activeAKey && sectorsByA[activeAKey]) {
+                    const aSectors = sectorsByA[activeAKey];
+                    if (currentFilter === 'all' || currentFilter === 'pp8') {
+                        aSectors.pp8.forEach(poly => sectorsToShow.push({ polygon: poly, type: 'pp8' }));
+                    }
+                    if (currentFilter === 'all' || currentFilter === 'pp6') {
+                        aSectors.pp6.forEach(poly => sectorsToShow.push({ polygon: poly, type: 'pp6' }));
+                    }
+                } else {
+                    allSectors.forEach(s => {
+                        if (currentFilter === 'all' || currentFilter === s.type) {
+                            sectorsToShow.push(s);
+                        }
+                    });
+                }
+
+                sectorsToShow.forEach(s => {
+                    if (s.type === 'pp8') {
+                        pp8Layer.addLayer(s.polygon);
+                    } else if (s.type === 'pp6') {
+                        pp6Layer.addLayer(s.polygon);
+                    }
+                });
+
+                document.querySelectorAll('#customControl button[data-filter]').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === currentFilter && !filterByA);
+                });
+
+                document.getElementById('activeAName').textContent = activeA ? activeA.fpgs : '-';
+            }
+
+            // ------------------------------------------------------------
+            // 9. Čitanje CSV-a i kreiranje A tačaka i sektora
+            // ------------------------------------------------------------
+            const markerData = [];
+            const addedCoords = {};
+            let totalSectors = 0;
+
+            const hoverTooltip = document.getElementById('hoverTooltip');
+            const mouseAzimuthDiv = document.getElementById('mouse-azimuth');
+            let hoveringBRow = null;
+            let lastMouseLatLng = null;
+            let hoveredGridId = null;
+
+            // PNG dimenzije
+            let pngImgWidth = null;
+            let pngImgHeight = null;
+            const PNG_BOUNDS = [
+                [41.46974424083233, 15.46096394958954],
+                [45.96991870077077, 21.66292597350616]
             ];
 
-            // Приказујемо параметре са звездицама
-            for (let p of params) {
-                if (p.value === null || p.value === undefined) continue;
-                const val = p.value;
-                const card = document.createElement('div');
-                card.className = 'param-card';
-                let status = 'neutral';
-                if (p.good && p.good(val)) status = 'good';
-                else if (p.medium && p.medium(val)) status = 'medium';
-                else if (p.good && !p.good(val) && !p.medium) status = 'bad';
-                else if (p.medium && !p.good(val) && !p.medium(val)) status = 'bad';
-                card.classList.add(status);
-
-                let displayVal = (typeof val === 'number') ? (Number.isInteger(val) ? val.toFixed(0) : val.toFixed(1)) : '--';
-                if (p.label.includes('PWAT')) displayVal = val.toFixed(1);
-                const dot = statusDot(val, p.good, p.medium);
-                // Звездице
-                const stars = '★'.repeat(p.weight) + '☆'.repeat(5 - p.weight);
-                card.innerHTML = `
-                    <div class="label">${dot} ${p.label} <span style="float:right; color:#f9ca7f; font-size:10px;">${stars}</span></div>
-                    <div class="value">${displayVal} ${p.unit}</div>
-                    <div class="threshold">${p.desc} ${scoreDisplay(p.score)}</div>
-                `;
-                grid.appendChild(card);
+            function showHoverTooltip(text, latlng) {
+                hoverTooltip.textContent = text;
+                hoverTooltip.style.display = 'block';
+                const point = map.latLngToContainerPoint(latlng);
+                hoverTooltip.style.left = (point.x + 10) + 'px';
+                hoverTooltip.style.top = (point.y - 10) + 'px';
             }
 
-            // Bunkers
-            if (bunkers.right) {
-                const r = uvToWind(bunkers.right.u, bunkers.right.v);
-                const l = uvToWind(bunkers.left.u, bunkers.left.v);
-                document.getElementById('rightDir').textContent = `${r.dir.toFixed(0)}°`;
-                document.getElementById('rightSpeed').textContent = `${r.speed.toFixed(1)} m/s`;
-                document.getElementById('leftDir').textContent = `${l.dir.toFixed(0)}°`;
-                document.getElementById('leftSpeed').textContent = `${l.speed.toFixed(1)} m/s`;
-            } else {
-                document.getElementById('rightDir').textContent = '--';
-                document.getElementById('rightSpeed').textContent = '--';
-                document.getElementById('leftDir').textContent = '--';
-                document.getElementById('leftSpeed').textContent = '--';
+            function hideHoverTooltip() {
+                hoverTooltip.style.display = 'none';
+                hoverTooltip.textContent = '';
             }
 
-            // SCP
-            const scpDisplay = document.getElementById('scpDisplay');
-            const scpInterp = document.getElementById('scpInterpretation');
-            if (scp > 0) {
-                scpDisplay.textContent = scp.toFixed(2);
-                if (scp >= 1) { scpDisplay.style.color = '#6fcf97'; scpInterp.textContent = 'Повољан потенцијал за суперћелије!'; }
-                else if (scp >= 0.5) { scpDisplay.style.color = '#f9ca7f'; scpInterp.textContent = 'Маргинални потенцијал за суперћелије'; }
-                else { scpDisplay.style.color = '#f28b82'; scpInterp.textContent = 'Низак потенцијал за суперћелије'; }
-            } else {
-                scpDisplay.textContent = '0.00';
-                scpDisplay.style.color = '#f28b82';
-                scpInterp.textContent = 'Нема назнака за суперћелије';
+            function updateMouseAzimuth(latlng) {
+                let html = '';
+                if (!activeA) {
+                    html = 'Nema aktivnog A<br>Kliknite na A marker';
+                } else {
+                    const az = bearing(activeA.lat, activeA.lon, latlng.lat, latlng.lng);
+                    const dist = haversine(activeA.lat, activeA.lon, latlng.lat, latlng.lng);
+                    html = `Azimut od A (${activeA.fpgs}): ${az.toFixed(1)}°<br>Udaljenost: ${dist.toFixed(1)} km`;
+                    if (hoveringBRow) {
+                        html += `<br>PP8: ${hoveringBRow.pp8}  TD6B: ${hoveringBRow.td6b}`;
+                    }
+                }
+
+                if (hoveredGridId) {
+                    html += `<br>Kvadrat: ${hoveredGridId}`;
+                }
+
+                if (pngOverlay && pngVisible && pngImgWidth && pngImgHeight) {
+                    const latMin = PNG_BOUNDS[0][0],
+                        latMax = PNG_BOUNDS[1][0];
+                    const lonMin = PNG_BOUNDS[0][1],
+                        lonMax = PNG_BOUNDS[1][1];
+                    if (latlng.lat >= latMin && latlng.lat <= latMax && latlng.lng >= lonMin && latlng.lng <= lonMax) {
+                        const px = ((latlng.lng - lonMin) / (lonMax - lonMin)) * pngImgWidth;
+                        const py = ((latMax - latlng.lat) / (latMax - latMin)) * pngImgHeight;
+                        html += `<br>Piksel: ${Math.round(px)}, ${Math.round(py)}`;
+                    }
+                }
+
+                mouseAzimuthDiv.innerHTML = html;
             }
 
-            // HAIL
-            const hailPercent = document.getElementById('hailPercent');
-            const hailDesc = document.getElementById('hailDesc');
-            const hailDetail = document.getElementById('hailDetail');
+            map.on('mousemove', function(e) {
+                lastMouseLatLng = e.latlng;
+                updateMouseAzimuth(e.latlng);
+                if (pngOverlay && pngVisible && pngImgWidth && pngImgHeight) {
+                    const lat = e.latlng.lat,
+                        lon = e.latlng.lng;
+                    const latMin = PNG_BOUNDS[0][0],
+                        latMax = PNG_BOUNDS[1][0];
+                    const lonMin = PNG_BOUNDS[0][1],
+                        lonMax = PNG_BOUNDS[1][1];
+                    if (lat >= latMin && lat <= latMax && lon >= lonMin && lon <= lonMax) {
+                        const px = ((lon - lonMin) / (lonMax - lonMin)) * pngImgWidth;
+                        const py = ((latMax - lat) / (latMax - latMin)) * pngImgHeight;
+                        showHoverTooltip(`Piksel: ${Math.round(px)}, ${Math.round(py)}`, e.latlng);
+                    } else {
+                        // Ako nije iznad PNG-a, sakrij tooltip (osim ako nije nešto drugo)
+                    }
+                }
+            });
 
-            let percentColor = '#f28b82';
-            let descText = 'Низак ризик од града';
-            if (hailProb >= 70) { percentColor = '#6fcf97'; descText = 'Висок ризик од града – могуће велики град!'; }
-            else if (hailProb >= 40) { percentColor = '#f9ca7f'; descText = 'Умерен ризик од града'; }
-            else if (hailProb >= 20) { percentColor = '#f9ca7f'; descText = 'Маргиналан ризик од града'; }
-            else { percentColor = '#f28b82'; descText = 'Низак ризик од града'; }
+            map.on('mouseout', function(e) {});
 
-            hailPercent.textContent = `${Math.round(hailProb)}%`;
-            hailPercent.style.color = percentColor;
-            hailDesc.textContent = descText;
+            const lines = csvData.split('\n');
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cols = line.split(',');
+                if (cols.length < 26) continue;
 
-            let detailParts = [];
-            if (freezingLevel !== null) detailParts.push(`0°C: ${freezingLevel.toFixed(0)} m`);
-            if (wbZero !== null) detailParts.push(`WB0: ${wbZero.toFixed(0)} m`);
-            if (el !== null) detailParts.push(`EL: ${el.toFixed(0)} m`);
-            if (lfc !== null) detailParts.push(`LFC: ${lfc.toFixed(0)} m`);
-            if (meanRH03 !== null) detailParts.push(`RH₀₋₃: ${Math.round(meanRH03)}%`);
-            hailDetail.textContent = detailParts.join(' | ');
+                const fpgs = cols[0];
+                const lat = parseFloat(cols[1]);
+                const lon = parseFloat(cols[2]);
+                if (isNaN(lat) || isNaN(lon)) continue;
 
-            resultsDiv.style.display = 'block';
-            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const key = lat + ',' + lon;
+                if (!addedCoords[key]) {
+                    addedCoords[key] = true;
+                    const marker = L.marker([lat, lon], { icon: aIcon })
+                        .addTo(markerLayer)
+                        .bindPopup(`<b>${fpgs}</b><br>lat: ${lat}, lon: ${lon}`);
 
-        } catch (err) {
-            errorDiv.textContent = '⚠️ Грешка при анализи: ' + err.message;
-            errorDiv.style.display = 'block';
-            console.error(err);
-        }
-    }
+                    marker.on('mouseover', function(e) {
+                        showHoverTooltip(fpgs, e.latlng);
+                    });
+                    marker.on('mouseout', function(e) {
+                        hideHoverTooltip();
+                    });
 
-    function loadFile(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('soundingData').value = e.target.result;
-            analyze();
-        };
-        reader.readAsText(file);
-        event.target.value = '';
-    }
+                    marker.on('click', function(e) {
+                        if (activeA) {
+                            activeA.marker.setIcon(aIcon);
+                        }
+                        activeA = { fpgs, lat, lon, marker };
+                        activeA.marker.setIcon(aSelectedIcon);
+                        activeAKey = fpgs;
+                        filterByA = true;
+                        document.getElementById('activeAName').textContent = fpgs;
+                        updateSectorsVisibility();
+                        updatePopups();
+                        L.DomEvent.stopPropagation(e);
+                    });
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const textarea = document.getElementById('soundingData');
-        if (textarea.value.trim().length > 0) {
-            setTimeout(analyze, 300);
-        }
-    });
-</script>
+                    markerData.push({ fpgs, lat, lon, marker });
+                }
+
+                const aKey = fpgs;
+                if (!sectorsByA[aKey]) {
+                    sectorsByA[aKey] = { pp8: [], pp6: [] };
+                }
+
+                const pp8Pairs = [
+                    [cols[5], cols[6]],
+                    [cols[7], cols[8]],
+                    [cols[9], cols[10]],
+                    [cols[11], cols[12]]
+                ];
+                pp8Pairs.forEach(([start, end]) => {
+                    if (start && end && start.trim() !== '' && end.trim() !== '') {
+                        const coords = generateSectorCoords(lat, lon, 8, 4, start, end);
+                        if (coords) {
+                            const polygon = L.polygon(coords, {
+                                color: '#cc0000',
+                                weight: 1.5,
+                                opacity: 0.8,
+                                fillColor: '#ff0000',
+                                fillOpacity: 0.1
+                            });
+                            allSectors.push({ polygon, type: 'pp8', aKey });
+                            sectorsByA[aKey].pp8.push(polygon);
+                            totalSectors++;
+                        }
+                    }
+                });
+
+                const pp6Pairs = [
+                    [cols[13], cols[14]],
+                    [cols[15], cols[16]],
+                    [cols[17], cols[18]],
+                    [cols[19], cols[20]]
+                ];
+                pp6Pairs.forEach(([start, end]) => {
+                    if (start && end && start.trim() !== '' && end.trim() !== '') {
+                        const coords = generateSectorCoords(lat, lon, 4.5, 2.25, start, end);
+                        if (coords) {
+                            const polygon = L.polygon(coords, {
+                                color: '#0000cc',
+                                weight: 1.5,
+                                opacity: 0.8,
+                                fillColor: '#0000ff',
+                                fillOpacity: 0.1
+                            });
+                            allSectors.push({ polygon, type: 'pp6', aKey });
+                            sectorsByA[aKey].pp6.push(polygon);
+                            totalSectors++;
+                        }
+                    }
+                });
+            }
+
+            document.getElementById('count').textContent = totalSectors;
+            updateSectorsVisibility();
+
+            // ------------------------------------------------------------
+            // 10. Filteri i toggle sektora
+            // ------------------------------------------------------------
+            function applyFilter(filter) {
+                currentFilter = filter;
+                filterByA = false;
+                if (activeA) {
+                    activeA.marker.setIcon(aIcon);
+                    activeA = null;
+                    activeAKey = null;
+                    document.getElementById('activeAName').textContent = '-';
+                }
+                updateSectorsVisibility();
+            }
+
+            document.querySelectorAll('#customControl button[data-filter]').forEach(btn => {
+                btn.addEventListener('click', () => applyFilter(btn.dataset.filter));
+            });
+
+            const toggleSectorsBtn = document.getElementById('toggleSectorsBtn');
+            toggleSectorsBtn.addEventListener('click', function() {
+                sectorsVisible = !sectorsVisible;
+                this.textContent = sectorsVisible ? '📐' : '📐🚫';
+                this.className = sectorsVisible ? 'sectors-on' : 'sectors-off';
+                updateSectorsVisibility();
+            });
+
+            document.getElementById('clearABtn').addEventListener('click', function() {
+                if (activeA) {
+                    activeA.marker.setIcon(aIcon);
+                    activeA = null;
+                    activeAKey = null;
+                    document.getElementById('activeAName').textContent = '-';
+                }
+                filterByA = false;
+                updateSectorsVisibility();
+                updatePopups();
+            });
+
+            // ------------------------------------------------------------
+            // 11. Geografska mreža – ID D10–U29 (Q preskočen, ide R)
+            // ------------------------------------------------------------
+            const gridLayer = L.layerGroup().addTo(map);
+            const gridCells = [];
+            let selectedGridColor = null;
+            const greenCells = [];
+
+            function generateGrid() {
+                const latStart = 42.2;
+                const latEnd = 45.3 + 10 / 60;
+                const latStep = 10 / 60;
+                const lonStart = 16;
+                const lonEnd = 20 + 15 / 60;
+                const lonStep = 15 / 60;
+
+                let redIndex = 0;
+                for (let lat = latStart; lat < latEnd; lat += latStep) {
+                    let stupacIndex = 0;
+                    for (let lon = lonStart; lon < lonEnd; lon += lonStep) {
+                        const bounds = [
+                            [lat, lon],
+                            [lat + latStep, lon + lonStep]
+                        ];
+                        const rect = L.rectangle(bounds, {
+                            color: 'black',
+                            weight: 0.5,
+                            fillOpacity: 0,
+                            interactive: true
+                        });
+
+                        const latMin = lat;
+                        const latMax = lat + latStep;
+                        const lonMin = lon;
+                        const lonMax = lon + lonStep;
+
+                        const redBroj = 29 - redIndex;
+                        const slovoCode = 68 + stupacIndex + (stupacIndex >= 13 ? 1 : 0);
+                        const slovo = String.fromCharCode(slovoCode);
+                        const id = slovo + redBroj;
+
+                        rect.on('mouseover', function(e) {
+                            hoveredGridId = id;
+                            updateMouseAzimuth(e.latlng);
+                        });
+                        rect.on('mouseout', function(e) {
+                            hoveredGridId = null;
+                            if (lastMouseLatLng) {
+                                updateMouseAzimuth(lastMouseLatLng);
+                            }
+                        });
+
+                        rect.on('click', function(e) {
+                            if (selectedGridColor) {
+                                const color = selectedGridColor === 'green' ? '#00ff00' : '#ff0000';
+                                this.setStyle({ color: color, weight: 2 });
+
+                                if (selectedGridColor === 'green') {
+                                    const exists = greenCells.some(c =>
+                                        c.latMin === latMin && c.latMax === latMax &&
+                                        c.lonMin === lonMin && c.lonMax === lonMax
+                                    );
+                                    if (!exists) {
+                                        greenCells.push({ latMin, latMax, lonMin, lonMax });
+                                    }
+                                } else {
+                                    const idx = greenCells.findIndex(c =>
+                                        c.latMin === latMin && c.latMax === latMax &&
+                                        c.lonMin === lonMin && c.lonMax === lonMax
+                                    );
+                                    if (idx !== -1) {
+                                        greenCells.splice(idx, 1);
+                                    }
+                                }
+                                L.DomEvent.stopPropagation(e);
+                            }
+                        });
+
+                        rect.on('contextmenu', function(e) {
+                            this.setStyle({ color: 'black', weight: 0.5 });
+                            const idx = greenCells.findIndex(c =>
+                                c.latMin === latMin && c.latMax === latMax &&
+                                c.lonMin === lonMin && c.lonMax === lonMax
+                            );
+                            if (idx !== -1) {
+                                greenCells.splice(idx, 1);
+                            }
+                            L.DomEvent.stopPropagation(e);
+                            L.DomEvent.preventDefault(e);
+                        });
+
+                        rect.addTo(gridLayer);
+                        gridCells.push(rect);
+                        stupacIndex++;
+                    }
+                    redIndex++;
+                }
+            }
+            generateGrid();
+
+            const gridGreenBtn = document.getElementById('gridGreen');
+            const gridRedBtn = document.getElementById('gridRed');
+            const gridResetBtn = document.getElementById('gridReset');
+
+            gridGreenBtn.addEventListener('click', function() {
+                if (this.classList.contains('active')) {
+                    this.classList.remove('active');
+                    if (selectedGridColor === 'green') selectedGridColor = null;
+                } else {
+                    this.classList.add('active');
+                    gridRedBtn.classList.remove('active');
+                    selectedGridColor = 'green';
+                }
+            });
+
+            gridRedBtn.addEventListener('click', function() {
+                if (this.classList.contains('active')) {
+                    this.classList.remove('active');
+                    if (selectedGridColor === 'red') selectedGridColor = null;
+                } else {
+                    this.classList.add('active');
+                    gridGreenBtn.classList.remove('active');
+                    selectedGridColor = 'red';
+                }
+            });
+
+            gridResetBtn.addEventListener('click', function() {
+                gridCells.forEach(rect => {
+                    rect.setStyle({ color: 'black', weight: 0.5 });
+                });
+                greenCells.length = 0;
+            });
+
+            // ------------------------------------------------------------
+            // 12. Tačke B – dozvoljeno samo unutar zelenih ćelija,
+            //     ali NE unutar sektora aktivnog A i maks. 10 km
+            // ------------------------------------------------------------
+            let selectedPP8 = 0;
+            let selectedPP8X = 0;
+            let selectedTD6B = 0;
+            let selectedTD6BX = 0;
+
+            const bPoints = [];
+            let bLayer = L.layerGroup().addTo(map);
+            let bCounter = 0;
+
+            let deleteMode = false;
+            const deleteBtn = document.getElementById('deleteSelectedB');
+
+            deleteBtn.addEventListener('click', function() {
+                deleteMode = !deleteMode;
+                this.classList.toggle('delete-mode');
+                this.textContent = deleteMode ? '❌B' : '❌B';
+            });
+
+            const bIcon = L.divIcon({
+                className: 'b-marker',
+                html: '<div style="width:10px; height:10px; background:#0066cc; border-radius:50%; border:3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.5);"></div>',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+                popupAnchor: [0, -8]
+            });
+
+            function updatePopups() {
+                document.getElementById('bCount').textContent = bPoints.length;
+                document.getElementById('activeAName').textContent = activeA ? activeA.fpgs : '-';
+            }
+
+            function deleteBPoint(row) {
+                if (row.marker) {
+                    bLayer.removeLayer(row.marker);
+                }
+                const idx = bPoints.indexOf(row);
+                if (idx !== -1) {
+                    bPoints.splice(idx, 1);
+                }
+                updatePopups();
+                if (tableOverlay.style.display === 'flex') {
+                    renderTable();
+                }
+                deleteMode = false;
+                deleteBtn.classList.remove('delete-mode');
+                deleteBtn.textContent = '❌B';
+                if (hoveringBRow === row) {
+                    hoveringBRow = null;
+                    if (lastMouseLatLng) {
+                        updateMouseAzimuth(lastMouseLatLng);
+                    }
+                }
+                if (firebaseEnabled) {
+                    saveBPointsToFirebase();
+                }
+            }
+
+            function clearBPointsInternal(updateFirebase = true) {
+                bLayer.clearLayers();
+                bPoints.length = 0;
+                bCounter = 0;
+                document.getElementById('bCount').textContent = 0;
+                updatePopups();
+                updateMouseInfo();
+                tableOverlay.style.display = 'none';
+                deleteMode = false;
+                deleteBtn.classList.remove('delete-mode');
+                deleteBtn.textContent = '❌B';
+                hoveringBRow = null;
+                if (lastMouseLatLng) {
+                    updateMouseAzimuth(lastMouseLatLng);
+                }
+                if (updateFirebase && firebaseEnabled) {
+                    saveBPointsToFirebase();
+                }
+            }
+
+            function isPointInsideGreenCell(lat, lon) {
+                for (let cell of greenCells) {
+                    if (lat >= cell.latMin && lat <= cell.latMax &&
+                        lon >= cell.lonMin && lon <= cell.lonMax) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function isPointInActiveASectors(lat, lon) {
+                if (!activeAKey || !sectorsByA[activeAKey]) return false;
+                const aSectors = sectorsByA[activeAKey];
+                const allPolys = [...aSectors.pp8, ...aSectors.pp6];
+                for (let poly of allPolys) {
+                    if (pointInPolygon(lat, lon, poly)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function addBPoint(lat, lon) {
+                if (!activeA) {
+                    alert('Prvo kliknite na A marker za centar.');
+                    return;
+                }
+
+                if (!isPointInsideGreenCell(lat, lon)) {
+                    alert('Tačka B mora biti unutar zeleno obojene ćelije.');
+                    return;
+                }
+
+                const dist = haversine(activeA.lat, activeA.lon, lat, lon);
+                if (dist > 10) {
+                    alert('Udaljenost od aktivnog A je veća od 10 km. Nije dozvoljeno.');
+                    return;
+                }
+
+                if (isPointInActiveASectors(lat, lon)) {
+                    alert('Tačka B se nalazi unutar sektora (PP8 ili PP6) aktivnog A. Nije dozvoljeno.');
+                    return;
+                }
+
+                bCounter++;
+                const now = new Date();
+                const timeStr = now.toLocaleString();
+                const az = bearing(activeA.lat, activeA.lon, lat, lon);
+
+                const pp8 = selectedPP8;
+                const td6b = selectedTD6B;
+                const aName = activeA.fpgs;
+
+                const row = {
+                    bIndex: bCounter,
+                    bLat: lat,
+                    bLon: lon,
+                    bDate: now,
+                    bTime: timeStr,
+                    aName: aName,
+                    az: az,
+                    dist: dist,
+                    pp8: pp8,
+                    td6b: td6b,
+                    pp8x: 0,
+                    td6bx: 0,
+                    confirmationTime: null,
+                    confirmationDate: null,
+                    marker: null
+                };
+                bPoints.push(row);
+
+                const popupInitial =
+                    `PP8 ${pp8} TD6B ${td6b} B$${bCounter}<br>` +
+                    `A: ${aName}<br>` +
+                    `lat: ${lat}, lon: ${lon}<br>Vrijeme: ${timeStr}<br>` +
+                    `Azimut od A: ${az.toFixed(1)}°<br>Udaljenost: ${dist.toFixed(1)} km<br>` +
+                    `PP8X: -, TD6BX: -<br>Potvrda: -`;
+
+                const marker = L.marker([lat, lon], { icon: bIcon })
+                    .addTo(bLayer)
+                    .bindPopup(popupInitial);
+
+                marker.on('mouseover', function(e) {
+                    const prefix = row.confirmationTime ? 'B#' : 'B$';
+                    showHoverTooltip(`${prefix}${row.bIndex}  PP8:${row.pp8}  TD6B:${row.td6b}`, e.latlng);
+                    hoveringBRow = row;
+                    updateMouseAzimuth(e.latlng);
+                });
+                marker.on('mouseout', function(e) {
+                    hideHoverTooltip();
+                    hoveringBRow = null;
+                    if (lastMouseLatLng) {
+                        updateMouseAzimuth(lastMouseLatLng);
+                    }
+                });
+
+                row.marker = marker;
+
+                marker.on('contextmenu', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    L.DomEvent.preventDefault(e);
+
+                    if (!row.confirmationTime) {
+                        const pp8x = selectedPP8X;
+                        const td6bx = selectedTD6BX;
+                        const confirmNow = new Date();
+
+                        row.pp8x = pp8x;
+                        row.td6bx = td6bx;
+                        row.confirmationDate = confirmNow;
+                        row.confirmationTime = confirmNow.toLocaleString();
+
+                        const popupConfirmed =
+                            `PP8 ${row.pp8} TD6B ${row.td6b} B#${row.bIndex}<br>` +
+                            `A: ${row.aName}<br>` +
+                            `lat: ${row.bLat}, lon: ${row.bLon}<br>Vrijeme: ${row.bTime}<br>` +
+                            `Azimut od A: ${row.az.toFixed(1)}°<br>Udaljenost: ${row.dist.toFixed(1)} km<br>` +
+                            `PP8X: ${row.pp8x}, TD6BX: ${row.td6bx}<br>` +
+                            `Potvrda: ${row.confirmationTime}`;
+                        marker.setPopupContent(popupConfirmed);
+
+                        if (hoveringBRow === row) {
+                            const prefix = 'B#';
+                            showHoverTooltip(`${prefix}${row.bIndex}  PP8:${row.pp8}  TD6B:${row.td6b}`, e
+                            .latlng);
+                            updateMouseAzimuth(e.latlng);
+                        }
+
+                        if (tableOverlay.style.display === 'flex') {
+                            renderTable();
+                        }
+                        if (firebaseEnabled) {
+                            saveBPointsToFirebase();
+                        }
+                    } else {
+                        alert('Ova tačka B je već potvrđena.');
+                    }
+                });
+
+                marker.on('click', function(e) {
+                    if (deleteMode) {
+                        deleteBPoint(row);
+                        L.DomEvent.stopPropagation(e);
+                        L.DomEvent.preventDefault(e);
+                    }
+                });
+
+                updatePopups();
+                updateMouseInfo();
+                if (tableOverlay.style.display === 'flex') {
+                    renderTable();
+                }
+                if (firebaseEnabled) {
+                    saveBPointsToFirebase();
+                }
+            }
+
+            map.on('click', function(e) {
+                if (!deleteMode) {
+                    addBPoint(e.latlng.lat, e.latlng.lng);
+                }
+            });
+
+            function updateMouseInfo() {
+                if (!activeA) {
+                    mouseAzimuthDiv.innerHTML = 'Nema aktivnog A<br>Kliknite na A marker';
+                    return;
+                }
+                if (lastMouseLatLng) {
+                    updateMouseAzimuth(lastMouseLatLng);
+                }
+            }
+
+            // ------------------------------------------------------------
+            // 13. PP8, PP8X, TD6B, TD6BX dropdown-ovi
+            // ------------------------------------------------------------
+            const pp8Btn = document.getElementById('pp8DropdownBtn');
+            const pp8Content = document.getElementById('pp8DropdownContent');
+            pp8Btn.textContent = 'P8-0';
+            pp8Btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                pp8Content.classList.toggle('show-dropdown');
+                document.getElementById('td6bDropdownContent').classList.remove('show-dropdown');
+                document.getElementById('pp8xDropdownContent').classList.remove('show-dropdown');
+                document.getElementById('td6bxDropdownContent').classList.remove('show-dropdown');
+            });
+            pp8Content.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const val = btn.dataset.value;
+                if (val !== undefined) {
+                    selectedPP8 = parseInt(val);
+                    pp8Btn.textContent = `P8-${val}`;
+                    pp8Content.classList.remove('show-dropdown');
+                }
+            });
+
+            const pp8xBtn = document.getElementById('pp8xDropdownBtn');
+            const pp8xContent = document.getElementById('pp8xDropdownContent');
+            pp8xBtn.textContent = 'PX-0';
+            pp8xBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                pp8xContent.classList.toggle('show-dropdown');
+                document.getElementById('pp8DropdownContent').classList.remove('show-dropdown');
+                document.getElementById('td6bDropdownContent').classList.remove('show-dropdown');
+                document.getElementById('td6bxDropdownContent').classList.remove('show-dropdown');
+            });
+            pp8xContent.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const val = btn.dataset.value;
+                if (val !== undefined) {
+                    selectedPP8X = parseInt(val);
+                    pp8xBtn.textContent = `PX-${val}`;
+                    pp8xContent.classList.remove('show-dropdown');
+                }
+            });
+
+            const td6bBtn = document.getElementById('td6bDropdownBtn');
+            const td6bContent = document.getElementById('td6bDropdownContent');
+            td6bBtn.textContent = 'T6-0';
+            td6bBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                td6bContent.classList.toggle('show-dropdown');
+                document.getElementById('pp8DropdownContent').classList.remove('show-dropdown');
+                document.getElementById('pp8xDropdownContent').classList.remove('show-dropdown');
+                document.getElementById('td6bxDropdownContent').classList.remove('show-dropdown');
+            });
+            td6bContent.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const val = btn.dataset.value;
+                if (val !== undefined) {
+                    selectedTD6B = parseInt(val);
+                    td6bBtn.textContent = `T6-${val}`;
+                    td6bContent.classList.remove('show-dropdown');
+                }
+            });
+
+            const td6bxBtn = document.getElementById('td6bxDropdownBtn');
+            const td6bxContent = document.getElementById('td6bxDropdownContent');
+            td6bxBtn.textContent = 'TX-0';
+            td6bxBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                td6bxContent.classList.toggle('show-dropdown');
+                document.getElementById('pp8DropdownContent').classList.remove('show-dropdown');
+                document.getElementById('pp8xDropdownContent').classList.remove('show-dropdown');
+                document.getElementById('td6bDropdownContent').classList.remove('show-dropdown');
+            });
+            td6bxContent.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const val = btn.dataset.value;
+                if (val !== undefined) {
+                    selectedTD6BX = parseInt(val);
+                    td6bxBtn.textContent = `TX-${val}`;
+                    td6bxContent.classList.remove('show-dropdown');
+                }
+            });
+
+            document.addEventListener('click', function() {
+                pp8Content.classList.remove('show-dropdown');
+                pp8xContent.classList.remove('show-dropdown');
+                td6bContent.classList.remove('show-dropdown');
+                td6bxContent.classList.remove('show-dropdown');
+            });
+
+            // ------------------------------------------------------------
+            // 14. PNG radar – detekcija dimenzija slike i prikaz piksel koordinata
+            // ------------------------------------------------------------
+            let pngOverlay = null;
+            let pngVisible = false;
+            const radarToggle = document.getElementById('radarToggle');
+            const statusDiv = document.getElementById('status');
+
+            function loadPngFromUrl(url) {
+                const img = new Image();
+                img.onload = function() {
+                    pngImgWidth = img.width;
+                    pngImgHeight = img.height;
+                    if (pngOverlay) map.removeLayer(pngOverlay);
+                    pngOverlay = L.imageOverlay(url, PNG_BOUNDS, {
+                        opacity: 0.7,
+                        zIndex: 50,
+                        interactive: true,
+                        attribution: '&copy; Korisnik'
+                    }).addTo(map);
+                    pngVisible = true;
+                    radarToggle.textContent = '🖼️';
+                    radarToggle.className = 'radar-on';
+                    statusDiv.textContent = `✅ PNG (${pngImgWidth}×${pngImgHeight} px)`;
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.color = '#ffd700';
+                    console.log(`PNG dimenzije: ${pngImgWidth} × ${pngImgHeight}`);
+                };
+                img.onerror = function() {
+                    if (pngOverlay) map.removeLayer(pngOverlay);
+                    pngOverlay = L.imageOverlay(url, PNG_BOUNDS, {
+                        opacity: 0.7,
+                        zIndex: 50,
+                        interactive: true,
+                        attribution: '&copy; Korisnik'
+                    }).addTo(map);
+                    pngVisible = true;
+                    radarToggle.textContent = '🖼️';
+                    radarToggle.className = 'radar-on';
+                    statusDiv.textContent = '✅ PNG (dimenzije nepoznate)';
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.color = '#ffd700';
+                };
+                img.src = url;
+            }
+
+            document.getElementById('selectFolderBtn').addEventListener('click', function() { document.getElementById(
+                    'folderInput').click(); });
+            document.getElementById('folderInput').addEventListener('change', function(e) {
+                const files = e.target.files;
+                const pngFiles = [];
+                for (let i = 0; i < files.length; i++) {
+                    if (files[i].name.toLowerCase().endsWith('.png')) pngFiles.push(files[i]);
+                }
+                if (pngFiles.length === 0) { alert('Nema PNG fajlova u odabranom folderu.'); return; }
+                pngFiles.sort((a, b) => a.lastModified - b.lastModified);
+                const latest = pngFiles[pngFiles.length - 1];
+                const url = URL.createObjectURL(latest);
+                loadPngFromUrl(url);
+                statusDiv.textContent = `✅ Najnoviji PNG: ${latest.name}`;
+                this.value = '';
+            });
+
+            document.getElementById('loadKmzBtn').addEventListener('click', function() { document.getElementById(
+                    'fileInput').click(); });
+            document.getElementById('fileInput').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (!file.name.toLowerCase().endsWith('.kmz')) { alert('Molim odaberite KMZ fajl.'); this.value =
+                        ''; return; }
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    JSZip.loadAsync(ev.target.result).then(function(zip) {
+                        let pngEntry = null;
+                        zip.forEach(function(relativePath, zipEntry) {
+                            if (relativePath.toLowerCase().endsWith('.png') && !zipEntry.dir) pngEntry =
+                                zipEntry;
+                        });
+                        if (pngEntry) {
+                            pngEntry.async('blob').then(function(blob) {
+                                const url = URL.createObjectURL(blob);
+                                loadPngFromUrl(url);
+                                statusDiv.textContent = '✅ PNG iz KMZ učitano';
+                            });
+                        } else { alert('Nema PNG fajla u KMZ arhivi.'); }
+                    }).catch(function(err) { alert('Greška pri raspakivanju KMZ: ' + err.message); });
+                };
+                reader.readAsArrayBuffer(file);
+                this.value = '';
+            });
+
+            radarToggle.addEventListener('click', function() {
+                if (pngVisible) {
+                    if (pngOverlay) map.removeLayer(pngOverlay);
+                    pngVisible = false;
+                    pngImgWidth = null;
+                    pngImgHeight = null;
+                    radarToggle.textContent = '🖼️';
+                    radarToggle.className = 'radar-off';
+                    statusDiv.style.display = 'none';
+                } else {
+                    document.getElementById('pngInput').click();
+                }
+            });
+
+            const pngInput = document.createElement('input');
+            pngInput.type = 'file';
+            pngInput.accept = '.png,.jpg,.jpeg,.gif';
+            pngInput.style.display = 'none';
+            pngInput.id = 'pngInput';
+            document.body.appendChild(pngInput);
+            pngInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const url = URL.createObjectURL(file);
+                loadPngFromUrl(url);
+                statusDiv.textContent = `✅ PNG ručno: ${file.name}`;
+                this.value = '';
+            });
+
+            // ------------------------------------------------------------
+            // 15. Tabela A-B i export
+            // ------------------------------------------------------------
+            const tableOverlay = document.getElementById('tableOverlay');
+            const tableWrapper = document.getElementById('tableWrapper');
+            const showTableBtn = document.getElementById('showTableBtn');
+            const exportBtn = document.getElementById('exportExcelBtn');
+            const clearBbtn = document.getElementById('clearBbtn');
+
+            function buildTableData() {
+                return bPoints.map(row => ({
+                    'B redni': row.bIndex,
+                    'B lat': row.bLat.toFixed(6),
+                    'B lon': row.bLon.toFixed(6),
+                    'Vrijeme B': formatTimeHHMMSS(row.bDate),
+                    'A naziv': row.aName,
+                    'Azimut (°)': row.az.toFixed(1),
+                    'Udaljenost (km)': row.dist.toFixed(1),
+                    'PP8': row.pp8,
+                    'TD6B': row.td6b,
+                    'PP8X': row.confirmationTime ? row.pp8x : '-',
+                    'TD6BX': row.confirmationTime ? row.td6bx : '-',
+                    'ПОТВЕРДА': row.confirmationDate ? formatTimeHHMMSS(row.confirmationDate) : '-'
+                }));
+            }
+
+            function renderTable() {
+                const data = buildTableData();
+                if (data.length === 0) {
+                    tableWrapper.innerHTML = '<p>Nema podataka. Dodajte B klikom na mapu (nakon odabira A).</p>';
+                    return;
+                }
+                let html = '<table><thead><tr>';
+                const headers = Object.keys(data[0]);
+                headers.forEach(h => html += `<th>${h}</th>`);
+                html += '</tr></thead><tbody>';
+                data.forEach(row => {
+                    html += '<tr>';
+                    headers.forEach(h => html += `<td>${row[h]}</td>`);
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+                tableWrapper.innerHTML = html;
+            }
+
+            showTableBtn.addEventListener('click', function() {
+                tableOverlay.style.display = 'flex';
+                renderTable();
+            });
+
+            document.getElementById('closeTableBtn').addEventListener('click', function() {
+                tableOverlay.style.display = 'none';
+            });
+
+            tableOverlay.addEventListener('click', function(e) {
+                if (e.target === tableOverlay) {
+                    tableOverlay.style.display = 'none';
+                }
+            });
+
+            exportBtn.addEventListener('click', function() {
+                const data = buildTableData();
+                if (data.length === 0) {
+                    alert('Nema podataka za export.');
+                    return;
+                }
+                if (typeof XLSX === 'undefined') {
+                    alert('Biblioteka XLSX nije učitana. Provjerite internet vezu.');
+                    return;
+                }
+                try {
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Presjek');
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    const seconds = String(now.getSeconds()).padStart(2, '0');
+                    const fileName = `${year}${month}${day}_${hours}${minutes}${seconds}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                } catch (e) {
+                    alert('Greška pri exportu: ' + e.message);
+                }
+            });
+
+            clearBbtn.addEventListener('click', function() {
+                if (bPoints.length === 0) {
+                    alert('Nema tačaka B za brisanje.');
+                    return;
+                }
+                if (confirm('Obrisati sve tačke B?')) {
+                    clearBPointsInternal(true);
+                }
+            });
+
+            // ------------------------------------------------------------
+            // 16. KONTRAST / ENHANCE dugme
+            // ------------------------------------------------------------
+            const enhanceBtn = document.getElementById('enhanceBtn');
+            let enhanceActive = false;
+
+            enhanceBtn.addEventListener('click', function() {
+                enhanceActive = !enhanceActive;
+                const mapElement = document.getElementById('map');
+                if (enhanceActive) {
+                    mapElement.classList.add('enhanced');
+                    this.className = 'enhance-on';
+                    this.title = 'Isključi kontrast i pojačanje boja';
+                } else {
+                    mapElement.classList.remove('enhanced');
+                    this.className = 'enhance-off';
+                    this.title = 'Uključi kontrast +25%, svjetlina +8%, saturacija +15%';
+                }
+            });
+
+            // ------------------------------------------------------------
+            // 17. Inicijalizacija: pokušaj Firebase (RTDB) + učitaj B tačke
+            // ------------------------------------------------------------
+            setTimeout(async function() {
+                const ok = initFirebase();
+                if (ok) {
+                    firebaseEnabled = true;
+                    const loaded = await loadBPointsFromFirebase();
+                    if (loaded) {
+                        setupFirebaseListener();
+                        firebaseBtn.className = 'firebase-on';
+                        firebaseBtn.title = 'Isključi Firebase sinhronizaciju';
+                        fbStatusText.textContent = 'aktivno';
+                        firebaseStatusDiv.className = 'connected';
+                        firebaseStatusDiv.style.display = 'block';
+                        console.log('🔥 Firebase RTDB automatski aktiviran.');
+                    } else {
+                        firebaseEnabled = false;
+                        firebaseBtn.className = 'firebase-off';
+                        fbStatusText.textContent = 'greška';
+                        firebaseStatusDiv.className = 'error';
+                        firebaseStatusDiv.style.display = 'block';
+                    }
+                } else {
+                    fbStatusText.textContent = 'nije podešen';
+                    firebaseStatusDiv.className = 'error';
+                    firebaseStatusDiv.style.display = 'block';
+                }
+            }, 500);
+
+            console.log('✅ Aplikacija učitana! Ukupno tačaka A:', markerData.length);
+            console.log('🌍 Mapa koristi OSM France server (izbjegava 403).');
+            console.log('🗻 Dodata OpenTopoMap (izohipse, hidrologija, topografija).');
+            console.log('🔍 Sektori su 90% providni (fillOpacity: 0.1)');
+            console.log('📏 Crveni krugovi A povećani za 20% (6px umjesto 5px)');
+            console.log('📁 Excel fajl: YYYYMMDD_HHMMSS.xlsx');
+            console.log('🟩 B se može dodati samo unutar zeleno obojenih ćelija.');
+            console.log('⛔ B NE smije biti unutar sektora (PP8/PP6) aktivnog A.');
+            console.log('⛔ Maksimalna udaljenost A–B = 10 km.');
+            console.log('🖼️ PNG radar prikazuje piksel koordinate na hover.');
+            console.log('📊 dBZ boje u legendi: 20‑35 (#0055ff) do 60‑65 (#ffffff).');
+            console.log('📌 Legenda pomjerena na left:90px (10% udesno).');
+            console.log('🖱️ ID kvadrata se prikazuje u donjem desnom prozoru (bez floating tooltipa).');
+            console.log('✨ Enhance: kontrast +25%, svjetlina +8%, saturacija +15% (CSS filter).');
+            console.log('🔥 Firebase RTDB: automatska sinhronizacija tačaka B na:');
+            console.log('   https://planseta-ce461-default-rtdb.europe-west1.firebasedatabase.app/');
+            console.log('📌 Zamijenite apiKey i druge placeholder vrijednosti u firebaseConfig ako je potrebno.');
+        });
+    </script>
 </body>
 </html>

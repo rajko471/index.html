@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализа сондирања – Прогноза суперћелија + град</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #1a1e2b; color: #e0e4ef; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 1100px; width: 100%; background: #252b3d; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+        h1 { text-align: center; font-weight: 300; letter-spacing: 1px; margin-top: 0; border-bottom: 2px solid #3e4a66; padding-bottom: 15px; color: #b8c7f0; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        h1 .run-badge { font-size: 14px; background: #4a6bb5; padding: 4px 18px; border-radius: 30px; font-weight: 600; color: #fff; letter-spacing: 0.5px; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        h1 .run-badge:hover { background: #5f82d4; transform: scale(1.04); box-shadow: 0 4px 12px rgba(74,107,181,0.4); }
+        .input-section { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
+        .input-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .file-input-wrapper { background: #323a51; padding: 10px 16px; border-radius: 8px; border: 1px dashed #6b7ca1; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.2s; }
+        .file-input-wrapper:hover { background: #3c4662; border-color: #8ea4d4; }
+        textarea { width: 100%; height: 220px; background: #141824; color: #c8d0e6; border: 1px solid #3e4a66; border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; resize: vertical; line-height: 1.5; }
+        textarea:focus { outline: 2px solid #5b7abf; border-color: transparent; }
+        .btn { background: #4a6bb5; color: white; border: none; padding: 12px 28px; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; letter-spacing: 0.5px; align-self: flex-start; }
+        .btn:hover { background: #5f82d4; transform: scale(1.02); box-shadow: 0 4px 12px rgba(74,107,181,0.5); }
+        .btn:active { transform: scale(0.98); }
+        .btn-run-large { background: #4a6bb5; padding: 14px 40px; font-size: 18px; align-self: center; width: 100%; max-width: 320px; }
+        .btn-run-large:hover { background: #5f82d4; }
+        .results { margin-top: 25px; display: none; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .param-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .param-card { background: #1e2538; border-radius: 12px; padding: 14px 16px; border-left: 6px solid #4a6bb5; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .param-card .label { font-size: 12px; color: #9aa8c9; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .param-card .value { font-size: 26px; font-weight: 700; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+        .param-card .threshold { font-size: 11px; color: #7e8bb0; margin-top: 6px; border-top: 1px solid #2e3650; padding-top: 6px; line-height: 1.4; }
+        .good { color: #6fcf97; border-left-color: #6fcf97; }
+        .bad { color: #f28b82; border-left-color: #f28b82; }
+        .medium { color: #f9ca7f; border-left-color: #f9ca7f; }
+        .neutral { border-left-color: #8a9bb5; }
+        .bunkers-box { background: #1e2538; border-radius: 12px; padding: 18px 22px; margin-top: 15px; display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-around; }
+        .bunkers-item { display: flex; flex-direction: column; align-items: center; }
+        .bunkers-item .dir { font-size: 22px; font-weight: 600; }
+        .bunkers-item .speed { font-size: 18px; color: #b0bedd; }
+        .scp-indicator { background: #111724; border-radius: 40px; padding: 16px 30px; text-align: center; margin-top: 20px; }
+        .scp-indicator .scp-value { font-size: 32px; font-weight: 700; }
+        .hail-block { background: #1a2236; border-radius: 20px; padding: 20px 30px; margin-top: 20px; text-align: center; border: 2px solid #4a6bb5; }
+        .hail-block .hail-percent { font-size: 48px; font-weight: 800; margin: 6px 0; }
+        .hail-block .hail-desc { font-size: 18px; font-weight: 500; }
+        .hail-block .hail-detail { font-size: 14px; color: #9aa8c9; margin-top: 8px; }
+        .footnote { margin-top: 20px; font-size: 13px; color: #7e8bb0; text-align: center; border-top: 1px solid #2e3650; padding-top: 20px; }
+        .error-msg { color: #f28b82; background: #2a1f24; padding: 12px; border-radius: 8px; border-left: 4px solid #f28b82; margin-top: 10px; display: none; }
+        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+        .status-dot.good { background: #6fcf97; }
+        .status-dot.medium { background: #f9ca7f; }
+        .status-dot.bad { background: #f28b82; }
+        .status-dot.neutral { background: #8a9bb5; }
+        .param-card .label .status-dot { vertical-align: middle; }
+        .cb-type-card { border-left-color: #b8a5e0; background: #1e2538; }
+        .cb-type-card .value { font-size: 22px; font-weight: 700; }
+        @media (max-width: 600px) { .container { padding: 16px; } .param-grid { grid-template-columns: 1fr 1fr; } .hail-block .hail-percent { font-size: 36px; } .btn-run-large { max-width: 100%; } h1 .run-badge { font-size: 12px; padding: 3px 12px; } }
+        @media (max-width: 420px) { .param-grid { grid-template-columns: 1fr; } }
+        .star-rating { color: #f9ca7f; font-size: 11px; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>
+        ⚡ Анализа емаграма – суперћелије + град
+        <span class="run-badge" onclick="analyze()">▶ RUN</span>
+    </h1>
+
+    <div class="input-section">
+        <div class="input-row">
+            <div class="file-input-wrapper" onclick="document.getElementById('fileInput').click();">
+                📂 Учитај фајл
+                <input type="file" id="fileInput" accept=".txt,.dat,.profile" style="display:none;" onchange="loadFile(event)">
+            </div>
+            <span style="color:#7e8bb0;">или налепи податке испод</span>
+        </div>
+        <textarea id="soundingData" placeholder="Овде налепите садржај .profile или .txt фајла...">File start time : 26  7 22 12  0
+File ending time: 26  8  1 12  0
+Chosen date in meteorological file:           26           7          22          12
+
+YR: 2026   MON: 07   DAY: 22   HOUR: 12    AT POSITION:  18.0 136.0  LAT.: 45.00  LON.:  17.00
+PRSS:    0.9804E+03
+MSLP:    0.1018E+04
+TPP6:    0.4883E-03
+UMOF:    0.8966E-02
+VMOF:    0.1900E+00
+SHTF:    0.2696E+03
+DSWF:    0.7040E+03
+RH2M:    0.3000E+02
+U10M:    0.3455E+00
+V10M:   -0.2616E+01
+T02M:    0.2974E+03
+TCLD:    0.6870E+02
+SHGT:    0.3434E+03
+CAPE:    0.3200E+02
+CINH:    0.0000E+00
+LISD:    0.2780E+03
+LIB4:    0.5450E+01
+PBLH:    0.2829E+04
+
+PRESS HGT(MSL) TEMP DEW PT  WND DIR  WND SPD
+HPA       M      C     C       DEG     M/S
+E = Estimated Surface Height
+
+  980.   343.   24.2    5.6   352.5     2.6
+  975.   373.   22.6    4.5   354.4     3.4
+  950.   598.   20.0    4.0   355.7     4.4
+  925.   826.   17.8    3.6   356.1     4.9
+  900.  1059.   15.3    2.8     0.0     4.9
+  850.  1540.   10.8    2.1     0.0     4.9
+  800.  2040.    6.1    1.0     2.0     4.9
+  750.  2565.    1.1   -0.1     0.0     4.9
+  700.  3116.   -3.5   -4.1   351.2     5.5
+  650.  3700.   -3.9  -14.6   326.1     9.7
+  600.  4332.   -4.2  -42.7   321.0    12.1
+  550.  5012.   -8.6  -38.6   321.7    13.3
+  500.  5743.  -14.4  -38.1   318.9    13.2
+  450.  6530.  -20.7  -40.1   314.2    15.9
+  400.  7389.  -27.4  -46.1   317.8    17.9
+  350.  8335.  -34.8  -49.6   323.0    19.3
+  300.  9391.  -42.8  -54.4   321.1    22.7
+  250. 10615.  -43.9  -62.4   307.1    26.1
+  200. 12112.  -44.2  -74.7   284.3    27.7
+  150. 14011.  -50.8  -78.1   285.9    21.7
+  100. 16634.  -53.8  -85.8   260.1    14.4
+   70. 18907.  -55.3  -87.4   255.0     4.3
+   50. 21064.  -53.1  -87.4   102.8     3.9
+   40. 22502.  -52.5  -91.7   107.1     6.4
+   30. 24377.   21.4    4.4   354.9     3.9
+   20. 27064.  -44.6 -999.0    98.9    13.0
+   15. 29002.  -41.5 -999.0    96.1    13.4
+   10. 31781.  -35.8 -999.0    98.7    18.4
+    7. 34290.  -29.9 -999.0    94.0    19.8
+    5. 36704.  -26.3 -999.0   103.1    20.2
+    3. 40441.  -19.9 -999.0    86.9    20.5
+    2. 43492.  -11.3 -999.0    88.2    28.6
+    1. 48878.   22.0 -999.0   351.7     4.0
+    1. 51625.  -10.8 -999.0    94.6    41.3
+    0. 55902.  -15.2 -999.0   355.1     3.4
+    0. 60960.  -33.8 -999.0   353.8     3.1
+    0. 65682.  -45.8 -999.0   101.2    54.4
+    0. 68025.  -52.0 -999.0    95.4    56.7
+    0. 71552.  -65.6 -999.0    85.4    47.7
+    0. 75617.  -79.4 -999.0    64.5    73.0
+    0. 79358.  -93.2 -122.4    58.6    77.6</textarea>
+        <button class="btn btn-run-large" onclick="analyze()">🚀 Покрени анализу</button>
+        <div id="errorMsg" class="error-msg"></div>
+    </div>
+
+    <div id="resultsContainer" class="results">
+        <div id="paramGrid" class="param-grid"></div>
+
+        <div class="bunkers-box" id="bunkersBox">
+            <div class="bunkers-item"><span style="color:#7e8bb0;">Десни покретач</span><span class="dir" id="rightDir">--</span><span class="speed" id="rightSpeed">--</span></div>
+            <div class="bunkers-item"><span style="color:#7e8bb0;">Леви покретач</span><span class="dir" id="leftDir">--</span><span class="speed" id="leftSpeed">--</span></div>
+        </div>
+
+        <div class="scp-indicator">
+            <div style="color:#9aa8c9; font-size:14px;">Supercell Composite Parameter (SCP)</div>
+            <div class="scp-value" id="scpDisplay">--</div>
+            <div style="font-size:14px; color:#7e8bb0;" id="scpInterpretation"></div>
+        </div>
+
+        <div class="hail-block" id="hailBlock">
+            <div style="color:#9aa8c9; font-size:14px; letter-spacing:1px;">🌨️ ВЕРОВАТНОЋА ГРМЉАВИНСКОГ НЕВРЕМЕНА СА ГРАДОМ НА ТЛУ</div>
+            <div class="hail-percent" id="hailPercent">--</div>
+            <div class="hail-desc" id="hailDesc"></div>
+            <div class="hail-detail" id="hailDetail"></div>
+        </div>
+
+        <div class="footnote">Параметри су рангирани по важности (звездице). Вероватноћа града се рачуна као пондерисана сума бодова (0–100) за сваки параметар, при чему су тежине пропорционалне броју звездица. Скорови су прилагођени датим метеоролошким праговима. <span style="color:#b8a5e0;">💡 Тип Cb облака</span> се одређује на основу комбинације кључних параметара.</div>
+    </div>
+</div>
+
+<script>
+    // ====================== ОСНОВНЕ ФУНКЦИЈЕ ======================
+    function windToUV(dirDeg, speedMs) {
+        const rad = dirDeg * Math.PI / 180.0;
+        return { u: -speedMs * Math.sin(rad), v: -speedMs * Math.cos(rad) };
+    }
+    function uvToWind(u, v) {
+        const spd = Math.hypot(u, v);
+        if (spd < 1e-6) return { dir: 0, speed: 0 };
+        let dir = Math.atan2(-u, -v) * 180.0 / Math.PI;
+        if (dir < 0) dir += 360.0;
+        return { dir, speed: spd };
+    }
+
+    function parseData(text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const meta = {};
+        const data = [];
+        let inData = false;
+
+        for (let line of lines) {
+            if (line.includes('CAPE:')) {
+                const parts = line.split(/\s+/);
+                for (let i=0; i<parts.length; i++) {
+                    if (parts[i].toUpperCase().includes('CAPE') && i+1 < parts.length) {
+                        const val = parseFloat(parts[i+1].replace(',',''));
+                        if (!isNaN(val)) meta.CAPE = val;
+                    }
+                    if (parts[i].toUpperCase().includes('CINH') && i+1 < parts.length) {
+                        const val = parseFloat(parts[i+1].replace(',',''));
+                        if (!isNaN(val)) meta.CIN = val;
+                    }
+                    if (parts[i].toUpperCase().includes('LISD') && i+1 < parts.length) {
+                        const val = parseFloat(parts[i+1].replace(',',''));
+                        if (!isNaN(val)) meta.LISD = val;
+                    }
+                    if (parts[i].toUpperCase().includes('LIB4') && i+1 < parts.length) {
+                        const val = parseFloat(parts[i+1].replace(',',''));
+                        if (!isNaN(val)) meta.LIB4 = val;
+                    }
+                    if (parts[i].toUpperCase().includes('PBLH') && i+1 < parts.length) {
+                        const val = parseFloat(parts[i+1].replace(',',''));
+                        if (!isNaN(val)) meta.PBLH = val;
+                    }
+                    if (parts[i].toUpperCase().includes('RH2M') && i+1 < parts.length) {
+                        const val = parseFloat(parts[i+1].replace(',',''));
+                        if (!isNaN(val)) meta.RH2M = val;
+                    }
+                }
+            }
+            if (/PRESS\s+HGT/.test(line) && /TEMP/.test(line) && /DEW/.test(line)) {
+                inData = true;
+                continue;
+            }
+            if (inData) {
+                const parts = line.split(/\s+/);
+                if (parts.length < 6) continue;
+                const press = parseFloat(parts[0]);
+                const hgt = parseFloat(parts[1]);
+                const temp = parseFloat(parts[2]);
+                const dew = parseFloat(parts[3]);
+                const wdir = parseFloat(parts[4]);
+                const wspd = parseFloat(parts[5]);
+                if (isNaN(press) || isNaN(hgt) || isNaN(temp) || isNaN(dew) || isNaN(wdir) || isNaN(wspd)) continue;
+                if (press <= 0 || press > 1100) continue;
+                if (press < 100 && temp > 0) continue;
+                if (hgt < 0) continue;
+                const uv = windToUV(wdir, wspd);
+                data.push({ press, hgt, temp, dew, wdir, wspd, u: uv.u, v: uv.v });
+            }
+        }
+        data.sort((a,b) => a.hgt - b.hgt);
+        return { meta, data };
+    }
+
+    function interpolate(data, targetHgt) {
+        if (data.length === 0) return null;
+        if (targetHgt <= data[0].hgt) return { ...data[0] };
+        if (targetHgt >= data[data.length-1].hgt) return { ...data[data.length-1] };
+        for (let i=0; i<data.length-1; i++) {
+            const h1 = data[i].hgt, h2 = data[i+1].hgt;
+            if (targetHgt >= h1 && targetHgt <= h2) {
+                const frac = (targetHgt - h1) / (h2 - h1);
+                return {
+                    press: data[i].press + frac * (data[i+1].press - data[i].press),
+                    hgt: targetHgt,
+                    temp: data[i].temp + frac * (data[i+1].temp - data[i].temp),
+                    dew: data[i].dew + frac * (data[i+1].dew - data[i].dew),
+                    u: data[i].u + frac * (data[i+1].u - data[i].u),
+                    v: data[i].v + frac * (data[i+1].v - data[i].v),
+                    wdir: null, wspd: null
+                };
+            }
+        }
+        return { ...data[data.length-1] };
+    }
+
+    function interpolatePressure(data, targetPress) {
+        if (data.length === 0) return null;
+        if (targetPress >= data[0].press) return { ...data[0] };
+        if (targetPress <= data[data.length-1].press) return { ...data[data.length-1] };
+        for (let i=0; i<data.length-1; i++) {
+            const p1 = data[i].press, p2 = data[i+1].press;
+            if (targetPress >= p2 && targetPress <= p1) {
+                const frac = (p1 - targetPress) / (p1 - p2);
+                return {
+                    press: targetPress,
+                    hgt: data[i].hgt + frac * (data[i+1].hgt - data[i].hgt),
+                    temp: data[i].temp + frac * (data[i+1].temp - data[i].temp),
+                    dew: data[i].dew + frac * (data[i+1].dew - data[i].dew),
+                    u: data[i].u + frac * (data[i+1].u - data[i].u),
+                    v: data[i].v + frac * (data[i+1].v - data[i].v),
+                    wdir: null, wspd: null
+                };
+            }
+        }
+        return { ...data[data.length-1] };
+    }
+
+    function findHeightForTemp(data, targetTemp) {
+        if (data.length < 2) return null;
+        for (let i=0; i<data.length-1; i++) {
+            const t1 = data[i].temp, t2 = data[i+1].temp;
+            const h1 = data[i].hgt, h2 = data[i+1].hgt;
+            if ((t1 <= targetTemp && t2 >= targetTemp) || (t1 >= targetTemp && t2 <= targetTemp)) {
+                const frac = (targetTemp - t1) / (t2 - t1);
+                return h1 + frac * (h2 - h1);
+            }
+        }
+        return null;
+    }
+
+    function computeRH(tempC, dewC) {
+        if (dewC < -900) return NaN;
+        const es = 6.112 * Math.exp((17.67 * tempC) / (tempC + 243.5));
+        const e = 6.112 * Math.exp((17.67 * dewC) / (dewC + 243.5));
+        if (es === 0) return 0;
+        const rh = (e / es) * 100;
+        return Math.min(100, Math.max(0, rh));
+    }
+
+    function wetBulbStull(T_C, RH) {
+        if (RH < 0 || RH > 100) return NaN;
+        const sqrtRH = Math.sqrt(RH + 8.313659);
+        const term1 = T_C * Math.atan(0.151977 * sqrtRH);
+        const term2 = Math.atan(T_C + RH);
+        const term3 = Math.atan(RH - 1.676331);
+        const term4 = 0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH);
+        return term1 + term2 - term3 + term4 - 4.686035;
+    }
+
+    function findWetBulbZero(data) {
+        if (data.length < 2) return null;
+        let prevTw = null, prevH = null;
+        for (let i=0; i<data.length; i++) {
+            const T = data[i].temp, Td = data[i].dew;
+            if (Td < -900) continue;
+            const RH = computeRH(T, Td);
+            if (isNaN(RH) || RH < 0) continue;
+            const Tw = wetBulbStull(T, RH);
+            if (isNaN(Tw)) continue;
+            const h = data[i].hgt;
+            if (prevTw !== null) {
+                if ((prevTw <= 0 && Tw >= 0) || (prevTw >= 0 && Tw <= 0)) {
+                    const frac = (0 - prevTw) / (Tw - prevTw);
+                    return prevH + frac * (h - prevH);
+                }
+            }
+            prevTw = Tw;
+            prevH = h;
+        }
+        return null;
+    }
+
+    function computeEL(data, lclHeight) {
+        if (data.length < 2 || lclHeight === null) return null;
+        let lclIdx = 0;
+        for (let i=0; i<data.length; i++) {
+            if (data[i].hgt >= lclHeight) { lclIdx = i; break; }
+        }
+        if (lclIdx >= data.length - 1) return null;
+        let parcelTemp = data[lclIdx].temp;
+        let prevParcelTemp = parcelTemp;
+        let prevH = data[lclIdx].hgt;
+        let foundEL = null;
+        for (let i=lclIdx+1; i<data.length; i++) {
+            const envTemp = data[i].temp;
+            const h = data[i].hgt;
+            const dh = h - prevH;
+            const dT = -6.5 * (dh / 1000.0);
+            const newParcelTemp = prevParcelTemp + dT;
+            if (prevParcelTemp > envTemp && newParcelTemp <= envTemp) {
+                const frac = (envTemp - prevParcelTemp) / (newParcelTemp - prevParcelTemp);
+                foundEL = prevH + frac * dh;
+                break;
+            }
+            prevParcelTemp = newParcelTemp;
+            prevH = h;
+            if (i === data.length - 1) foundEL = h;
+        }
+        return foundEL;
+    }
+
+    function computeLFC(data, lclHeight) {
+        if (data.length < 2 || lclHeight === null) return null;
+        let lclIdx = 0;
+        for (let i=0; i<data.length; i++) {
+            if (data[i].hgt >= lclHeight) { lclIdx = i; break; }
+        }
+        if (lclIdx >= data.length - 1) return null;
+        let parcelTemp = data[lclIdx].temp;
+        let prevParcelTemp = parcelTemp;
+        let prevH = data[lclIdx].hgt;
+        let foundLFC = null;
+        for (let i=lclIdx+1; i<data.length; i++) {
+            const envTemp = data[i].temp;
+            const h = data[i].hgt;
+            const dh = h - prevH;
+            const dT = -6.5 * (dh / 1000.0);
+            const newParcelTemp = prevParcelTemp + dT;
+            if (prevParcelTemp <= envTemp && newParcelTemp > envTemp) {
+                const frac = (envTemp - prevParcelTemp) / (newParcelTemp - prevParcelTemp);
+                foundLFC = prevH + frac * dh;
+                break;
+            }
+            prevParcelTemp = newParcelTemp;
+            prevH = h;
+            if (i === data.length - 1) foundLFC = h;
+        }
+        return foundLFC;
+    }
+
+    function computeMeanRH(data, h1=0, h2=3000) {
+        const pts = data.filter(p => p.hgt >= h1 && p.hgt <= h2);
+        if (pts.length < 2) return null;
+        let sumRH = 0, totalH = 0;
+        for (let i=0; i<pts.length-1; i++) {
+            const dh = pts[i+1].hgt - pts[i].hgt;
+            if (dh === 0) continue;
+            const rh1 = computeRH(pts[i].temp, pts[i].dew);
+            const rh2 = computeRH(pts[i+1].temp, pts[i+1].dew);
+            if (isNaN(rh1) || isNaN(rh2)) continue;
+            sumRH += ((rh1 + rh2) / 2) * dh;
+            totalH += dh;
+        }
+        if (totalH === 0) return null;
+        return sumRH / totalH;
+    }
+
+    function computeBulkShear(data, h1=0, h2=6000) {
+        const p1 = interpolate(data, h1);
+        const p2 = interpolate(data, h2);
+        if (!p1 || !p2) return 0;
+        return Math.hypot(p2.u - p1.u, p2.v - p1.v);
+    }
+
+    function computeMeanWind(data, h1=0, h2=6000) {
+        const pts = data.filter(p => p.hgt >= h1 && p.hgt <= h2);
+        if (pts.length < 2) return null;
+        let sumU=0, sumV=0, totalH=0;
+        for (let i=0; i<pts.length-1; i++) {
+            const dh = pts[i+1].hgt - pts[i].hgt;
+            if (dh === 0) continue;
+            sumU += ((pts[i].u + pts[i+1].u) / 2) * dh;
+            sumV += ((pts[i].v + pts[i+1].v) / 2) * dh;
+            totalH += dh;
+        }
+        if (totalH === 0) return null;
+        return { u: sumU/totalH, v: sumV/totalH };
+    }
+
+    function computeBunkers(data) {
+        const mean = computeMeanWind(data, 0, 6000);
+        if (!mean) return { right: null, left: null };
+        const p0 = interpolate(data, 0);
+        const p6 = interpolate(data, 6000);
+        if (!p0 || !p6) return { right: null, left: null };
+        const shearU = p6.u - p0.u;
+        const shearV = p6.v - p0.v;
+        const shearMag = Math.hypot(shearU, shearV);
+        if (shearMag < 1e-6) return { right: mean, left: mean };
+        const normU = shearU / shearMag;
+        const normV = shearV / shearMag;
+        const rotRightU = normV, rotRightV = -normU;
+        const rotLeftU = -normV, rotLeftV = normU;
+        const right = { u: mean.u + 7.5 * rotRightU, v: mean.v + 7.5 * rotRightV };
+        const left = { u: mean.u + 7.5 * rotLeftU, v: mean.v + 7.5 * rotLeftV };
+        return { right, left };
+    }
+
+    function computeSRH(data, stormU, stormV, h1=0, h2=3000) {
+        const pts = data.filter(p => p.hgt >= h1 && p.hgt <= h2);
+        if (pts.length < 2) return 0;
+        let srh = 0;
+        for (let i=0; i<pts.length-1; i++) {
+            const dz = pts[i+1].hgt - pts[i].hgt;
+            if (dz === 0) continue;
+            const u1=pts[i].u, v1=pts[i].v, u2=pts[i+1].u, v2=pts[i+1].v;
+            const du_dz = (u2 - u1) / dz;
+            const dv_dz = (v2 - v1) / dz;
+            const uAvg = (u1 + u2) / 2;
+            const vAvg = (v1 + v2) / 2;
+            srh += ((vAvg - stormV) * du_dz - (uAvg - stormU) * dv_dz) * dz;
+        }
+        return srh;
+    }
+
+    function computeLCL(data) {
+        if (data.length === 0) return null;
+        const surface = data.reduce((a,b) => a.hgt < b.hgt ? a : b);
+        const T = surface.temp + 273.15;
+        const Td = Math.min(surface.dew + 273.15, T);
+        try {
+            const T_LCL_K = 1 / (1/(Td - 56.0) + Math.log(T/Td)/800.0) + 56.0;
+            const gamma_d = 9.81 / 1004.0;
+            return surface.hgt + (T - T_LCL_K) / gamma_d;
+        } catch(e) { return null; }
+    }
+
+    function computeTT(data) {
+        const p850 = interpolatePressure(data, 850);
+        const p500 = interpolatePressure(data, 500);
+        if (!p850 || !p500) return null;
+        return p850.temp + p850.dew - 2 * p500.temp;
+    }
+
+    function computeKIndex(data) {
+        const p850 = interpolatePressure(data, 850);
+        const p700 = interpolatePressure(data, 700);
+        const p500 = interpolatePressure(data, 500);
+        if (!p850 || !p700 || !p500) return null;
+        return (p850.temp - p500.temp) + p850.dew - (p700.temp - p700.dew);
+    }
+
+    function computeSWEAT(data) {
+        const p850 = interpolatePressure(data, 850);
+        const p700 = interpolatePressure(data, 700);
+        const p500 = interpolatePressure(data, 500);
+        if (!p850 || !p700 || !p500) return null;
+        const T850 = p850.temp, Td850 = p850.dew;
+        const T500 = p500.temp;
+        const TT = T850 + Td850 - 2 * T500;
+        const V850 = p850.wspd ? p850.wspd : 0;
+        const V500 = p500.wspd ? p500.wspd : 0;
+        const DD850 = p850.wdir ? p850.wdir : 0;
+        const DD500 = p500.wdir ? p500.wdir : 0;
+        let SWEAT = 12 * Td850 + 20 * (TT - 49) + 2 * V850 + V500 + 125 * (Math.sin((DD500 - DD850) * Math.PI / 180) + 0.2);
+        if (Td850 < 0) SWEAT = 12 * Td850 + 2 * V850 + V500 + 125 * (Math.sin((DD500 - DD850) * Math.PI / 180) + 0.2);
+        if (TT < 49) SWEAT = 12 * Td850 + 2 * V850 + V500 + 125 * (Math.sin((DD500 - DD850) * Math.PI / 180) + 0.2);
+        if (SWEAT < 0) SWEAT = 0;
+        return SWEAT;
+    }
+
+    function computePWAT(data) {
+        if (data.length < 2) return null;
+        let pwat = 0;
+        const g = 9.81;
+        for (let i=0; i<data.length-1; i++) {
+            const p1 = data[i].press, p2 = data[i+1].press;
+            const Td1 = data[i].dew, Td2 = data[i+1].dew;
+            if (Td1 < -900 || Td2 < -900) continue;
+            const e1 = 6.112 * Math.exp((17.67 * Td1) / (Td1 + 243.5));
+            const e2 = 6.112 * Math.exp((17.67 * Td2) / (Td2 + 243.5));
+            const q1 = 0.622 * e1 / (p1 - 0.378 * e1);
+            const q2 = 0.622 * e2 / (p2 - 0.378 * e2);
+            pwat += ((q1 + q2) / 2) * (p1 - p2) / g;
+        }
+        return pwat;
+    }
+
+    function computeDCAPE(data) {
+        if (data.length < 2) return null;
+        const p700 = interpolatePressure(data, 700);
+        if (!p700) return null;
+        const T700 = p700.temp;
+        const Td700 = p700.dew;
+        if (Td700 < -900) return null;
+        const surface = data.reduce((a,b) => a.hgt < b.hgt ? a : b);
+        const ps = surface.press;
+        const g = 9.81;
+        let startIdx = 0;
+        for (let i=0; i<data.length; i++) {
+            if (data[i].press <= 700) { startIdx = i; break; }
+        }
+        if (startIdx === 0) return null;
+        let parcelTemp = T700;
+        let prevH = p700.hgt;
+        let prevP = 700;
+        let dcape = 0;
+        for (let i=startIdx-1; i>=0; i--) {
+            const envTemp = data[i].temp;
+            const h = data[i].hgt;
+            const p = data[i].press;
+            const dh = h - prevH;
+            if (dh === 0) continue;
+            const dT = (9.81/1004.0) * (-dh) / 1000.0;
+            const newParcelTemp = parcelTemp + dT;
+            const buoy = newParcelTemp - envTemp;
+            if (buoy < 0) {
+                dcape += -buoy * g * (-dh) / (envTemp + 273.15);
+            }
+            parcelTemp = newParcelTemp;
+            prevH = h;
+            prevP = p;
+        }
+        return dcape;
+    }
+
+    // ========== НОВИ СКОРИНГ ФУНКЦИЈЕ ПРЕМА ВАШИМ ПРАГОВИМА ==========
+    function scoreCAPE(v) {
+        if (v >= 4000) return 100;
+        if (v >= 2500) return 80;
+        if (v >= 1000) return 60;
+        if (v >= 500) return 40;
+        if (v >= 200) return 20;
+        return 0;
+    }
+    function scoreFreezing(v) {
+        if (v === null) return 0;
+        if (v < 2500) return 90;      // visok rizik
+        if (v >= 2500 && v <= 3500) return 60;
+        if (v > 3500 && v <= 4000) return 40;
+        return 20;
+    }
+    const scoreWBZero = function(v) {
+        if (v === null) return 0;
+        if (v < 2500) return 100;
+        if (v >= 2500 && v <= 3000) return 70;
+        if (v > 3000 && v <= 3500) return 50;
+        return 20;
+    };
+    function scoreLI(v) {
+        if (v === null) return 0;
+        if (v < -6) return 100;
+        if (v >= -6 && v <= -4) return 70;
+        if (v > -4 && v <= -2) return 40;
+        if (v > -2 && v <= 0) return 20;
+        return 0;
+    }
+    function scoreTT(v) {
+        if (v === null) return 0;
+        if (v >= 55) return 100;
+        if (v >= 50) return 70;
+        if (v >= 45) return 40;
+        if (v >= 40) return 20;
+        return 0;
+    }
+    function scoreKIndex(v) {
+        if (v === null) return 0;
+        if (v >= 40) return 100;
+        if (v >= 30) return 70;
+        if (v >= 20) return 40;
+        if (v >= 10) return 20;
+        return 0;
+    }
+    function scoreSWEAT(v) {
+        if (v === null) return 0;
+        if (v >= 400) return 100;
+        if (v >= 300) return 70;
+        if (v >= 200) return 40;
+        if (v >= 100) return 20;
+        return 0;
+    }
+    function scoreLCL(v) {
+        if (v === null) return 0;
+        if (v <= 1200) return 80;
+        if (v > 1200 && v <= 1800) return 60;
+        if (v > 1800 && v <= 2500) return 30;
+        return 0;
+    }
+    function scoreLFC(v) {
+        if (v === null) return 0;
+        if (v <= 1500) return 80;
+        if (v > 1500 && v <= 2200) return 60;
+        if (v > 2200 && v <= 3000) return 30;
+        return 0;
+    }
+    function scoreEL(v) {
+        if (v === null) return 0;
+        if (v >= 10000) return 100;
+        if (v >= 8000) return 80;
+        if (v >= 6000) return 50;
+        if (v >= 4000) return 20;
+        return 0;
+    }
+    function scoreShear(v) {
+        if (v >= 25) return 100;
+        if (v >= 20) return 80;
+        if (v >= 15) return 50;
+        if (v >= 10) return 20;
+        return 0;
+    }
+    function scoreSRH(v) {
+        if (v >= 300) return 100;
+        if (v >= 250) return 80;
+        if (v >= 150) return 50;
+        if (v >= 80) return 20;
+        return 0;
+    }
+    function scoreDCAPE(v) {
+        if (v === null) return 0;
+        if (v >= 1000) return 100;
+        if (v >= 700) return 70;
+        if (v >= 400) return 40;
+        if (v >= 200) return 20;
+        return 0;
+    }
+    function scorePWAT(v) {
+        if (v === null) return 0;
+        if (v >= 40) return 100;
+        if (v >= 30) return 70;
+        if (v >= 20) return 40;
+        if (v >= 10) return 20;
+        return 0;
+    }
+    function scoreCIN(v) {
+        if (v === null) return 0;
+        if (v >= -10) return 100;
+        if (v >= -50) return 70;
+        if (v >= -150) return 40;
+        if (v >= -300) return 20;
+        return 0;
+    }
+
+    // ---------- ФУНКЦИЈА ЗА ОДРЕЂИВАЊЕ ТИПА Cb ОБЛАКА (не мења се) ----------
+    function classifyCB(cape, shear06, srh03, lcl, el, freezingLevel, meanRH03) {
+        let scoreSupercell = 0, scoreMulticell = 0, scoreOrdinary = 0;
+
+        if (cape >= 1000) { scoreSupercell += 20; scoreMulticell += 25; scoreOrdinary += 30; }
+        else if (cape >= 500) { scoreSupercell += 10; scoreMulticell += 20; scoreOrdinary += 25; }
+        else if (cape >= 200) { scoreSupercell += 5; scoreMulticell += 10; scoreOrdinary += 15; }
+        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 5; }
+
+        if (shear06 >= 20) { scoreSupercell += 30; scoreMulticell += 15; scoreOrdinary += 5; }
+        else if (shear06 >= 15) { scoreSupercell += 20; scoreMulticell += 20; scoreOrdinary += 10; }
+        else if (shear06 >= 10) { scoreSupercell += 10; scoreMulticell += 15; scoreOrdinary += 15; }
+        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 10; }
+
+        if (srh03 >= 150) { scoreSupercell += 25; scoreMulticell += 10; scoreOrdinary += 0; }
+        else if (srh03 >= 80) { scoreSupercell += 15; scoreMulticell += 15; scoreOrdinary += 5; }
+        else if (srh03 >= 50) { scoreSupercell += 5; scoreMulticell += 10; scoreOrdinary += 10; }
+        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 10; }
+
+        if (lcl !== null && lcl <= 1200) { scoreSupercell += 15; scoreMulticell += 10; scoreOrdinary += 5; }
+        else if (lcl !== null && lcl <= 1800) { scoreSupercell += 8; scoreMulticell += 12; scoreOrdinary += 8; }
+        else if (lcl !== null && lcl <= 2500) { scoreSupercell += 2; scoreMulticell += 8; scoreOrdinary += 10; }
+        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 5; }
+
+        if (el !== null && el >= 8000) { scoreSupercell += 15; scoreMulticell += 15; scoreOrdinary += 10; }
+        else if (el !== null && el >= 6000) { scoreSupercell += 10; scoreMulticell += 15; scoreOrdinary += 15; }
+        else if (el !== null && el >= 4000) { scoreSupercell += 5; scoreMulticell += 10; scoreOrdinary += 15; }
+        else { scoreSupercell += 0; scoreMulticell += 5; scoreOrdinary += 10; }
+
+        if (freezingLevel !== null && freezingLevel >= 2500 && freezingLevel <= 3500) {
+            scoreSupercell += 10; scoreMulticell += 10; scoreOrdinary += 5;
+        } else if (freezingLevel !== null && ((freezingLevel >= 2000 && freezingLevel < 2500) || (freezingLevel > 3500 && freezingLevel <= 4000))) {
+            scoreSupercell += 5; scoreMulticell += 8; scoreOrdinary += 8;
+        } else {
+            scoreSupercell += 0; scoreMulticell += 3; scoreOrdinary += 5;
+        }
+
+        if (meanRH03 !== null && meanRH03 >= 60) {
+            scoreSupercell += 10; scoreMulticell += 10; scoreOrdinary += 5;
+        } else if (meanRH03 !== null && meanRH03 >= 40) {
+            scoreSupercell += 5; scoreMulticell += 8; scoreOrdinary += 8;
+        } else {
+            scoreSupercell += 0; scoreMulticell += 3; scoreOrdinary += 5;
+        }
+
+        const maxScore = Math.max(scoreSupercell, scoreMulticell, scoreOrdinary);
+        if (maxScore === 0) return { type: 'Slaba konvekcija', description: 'Nema uslova za organizovanu konvekciju.' };
+        if (scoreSupercell === maxScore && scoreSupercell >= 40) {
+            return { type: '⚡ Superćelija (Cb capillatus / incus)', description: 'Visok vertikalni smicaj, jak helisitet, nizak LCL, povoljne izoterme. Moguć tornado i veliki grad.' };
+        } else if (scoreMulticell === maxScore && scoreMulticell >= 30) {
+            return { type: '🌩️ Multićelija (Cb congestus / calvus)', description: 'Umeren smicaj, više pojedinačnih ćelija. Moguć jak pljusak, grad i grmljavina.' };
+        } else if (scoreOrdinary === maxScore && scoreOrdinary >= 20) {
+            return { type: '⛅ Običan Cb (Cb humilis / mediocris)', description: 'Slab smicaj, lokalni pljuskovi. Povremena grmljavina, mali grad.' };
+        } else {
+            return { type: '🌤️ Slaba konvekcija', description: 'Nema dovoljno energije ili smicaja za ozbiljnije nevreme.' };
+        }
+    }
+
+    // ====================== ГЛАВНА ФУНКЦИЈА ======================
+    function analyze() {
+        const text = document.getElementById('soundingData').value;
+        const errorDiv = document.getElementById('errorMsg');
+        const resultsDiv = document.getElementById('resultsContainer');
+        errorDiv.style.display = 'none';
+        resultsDiv.style.display = 'none';
+
+        if (!text || text.trim().length === 0) {
+            errorDiv.textContent = '⚠️ Грешка: Нисте унели податке. Налепите садржај .profile фајла.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const parsed = parseData(text);
+            const { meta, data } = parsed;
+
+            if (data.length < 5) {
+                errorDiv.textContent = '⚠️ Грешка: Није пронађено довољно тачака у профилу. Проверите формат.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // ---------- ИЗРАЧУНАВАЊЕ ПАРАМЕТАРА ----------
+            const shear06 = computeBulkShear(data, 0, 6000);
+            const shear03 = computeBulkShear(data, 0, 3000);
+            const cape = meta.CAPE !== undefined ? meta.CAPE : 0;
+            const cin = meta.CIN !== undefined ? meta.CIN : 0;
+            const li = meta.LISD !== undefined ? meta.LISD : (meta.LIB4 !== undefined ? meta.LIB4 : null);
+            const rh2m = meta.RH2M !== undefined ? meta.RH2M : null;
+
+            let surfaceRH = null;
+            if (data.length > 0) {
+                const surface = data.reduce((a,b) => a.hgt < b.hgt ? a : b);
+                if (surface.temp !== undefined && surface.dew !== undefined && surface.dew > -999) {
+                    surfaceRH = computeRH(surface.temp, surface.dew);
+                }
+            }
+            let displayRH = surfaceRH;
+            if (rh2m !== null && !isNaN(rh2m)) {
+                if (rh2m <= 1 && rh2m >= 0) displayRH = rh2m * 100;
+                else if (rh2m > 0 && rh2m <= 100) displayRH = rh2m;
+                else displayRH = surfaceRH;
+            }
+
+            const meanRH03 = computeMeanRH(data, 0, 3000);
+
+            const bunkers = computeBunkers(data);
+            let srh03R = 0, srh01R = 0;
+            if (bunkers.right) {
+                srh03R = computeSRH(data, bunkers.right.u, bunkers.right.v, 0, 3000);
+                srh01R = computeSRH(data, bunkers.right.u, bunkers.right.v, 0, 1000);
+            }
+
+            const lcl = computeLCL(data);
+            const freezingLevel = findHeightForTemp(data, 0);
+            const wbZero = findWetBulbZero(data);
+            const el = computeEL(data, lcl);
+            const lfc = computeLFC(data, lcl);
+            const tt = computeTT(data);
+            const kIndex = computeKIndex(data);
+            const sweat = computeSWEAT(data);
+            const pwat = computePWAT(data);
+            const dcape = computeDCAPE(data);
+
+            // ---------- ТИП Cb ОБЛАКА ----------
+            const cbType = classifyCB(cape, shear06, srh03R, lcl, el, freezingLevel, meanRH03);
+
+            // ---------- БОДОВИ (нови scoring) ----------
+            const scores = {
+                cape: scoreCAPE(cape),
+                shear: scoreShear(shear06),
+                shear03: scoreShear(shear03),
+                wbZero: scoreWBZero(wbZero),
+                freezing: scoreFreezing(freezingLevel),
+                el: scoreEL(el),
+                li: scoreLI(li),
+                sweat: scoreSWEAT(sweat),
+                srh: scoreSRH(srh03R),
+                lcl: scoreLCL(lcl),
+                lfc: scoreLFC(lfc),
+                tt: scoreTT(tt),
+                cin: scoreCIN(cin),
+                pwat: scorePWAT(pwat),
+                kIndex: scoreKIndex(kIndex),
+                dcape: scoreDCAPE(dcape)
+            };
+
+            // ---------- ТЕЖИНЕ (звездице) ----------
+            const weights = {
+                cape: 5,
+                freezing: 5,
+                wbZero: 5,
+                li: 4,
+                tt: 4,
+                sweat: 4,
+                kIndex: 3,
+                lcl: 3,
+                lfc: 3,
+                el: 4,
+                shear: 5,
+                shear03: 4,
+                srh: 4,
+                dcape: 2,
+                pwat: 2,
+                cin: 3
+            };
+            const totalWeight = Object.values(weights).reduce((a,b) => a+b, 0);
+
+            let weightedProb = 0;
+            for (let key in weights) {
+                const w = weights[key] / totalWeight;
+                const s = scores[key] || 0;
+                weightedProb += w * s;
+            }
+            const hailProb = Math.min(100, Math.max(0, weightedProb));
+
+            // SCP
+            let scp = 0;
+            if (cape > 0 && shear06 > 0 && srh03R > 0) {
+                scp = (cape / 1000.0) * (shear06 / 20.0) * (srh03R / 50.0);
+            }
+
+            // ========== ПРИКАЗ ==========
+            const grid = document.getElementById('paramGrid');
+            grid.innerHTML = '';
+
+            function statusDot(val, goodFn, mediumFn) {
+                if (goodFn && goodFn(val)) return '<span class="status-dot good"></span>';
+                if (mediumFn && mediumFn(val)) return '<span class="status-dot medium"></span>';
+                return '<span class="status-dot bad"></span>';
+            }
+
+            function scoreDisplay(score) {
+                return ` (бод: ${Math.round(score)})`;
+            }
+
+            // Приказ типа Cb
+            const cbCard = document.createElement('div');
+            cbCard.className = 'param-card cb-type-card';
+            cbCard.innerHTML = `
+                <div class="label">💡 Očekivani tip Cb oblaka</div>
+                <div class="value">${cbType.type}</div>
+                <div class="threshold">${cbType.description}</div>
+            `;
+            grid.appendChild(cbCard);
+
+            // Листа параметара са новим тежинама (приказујемо звездице)
+            const params = [
+                { label: 'CAPE', value: cape, unit: 'J/kg', score: scores.cape, weight: 5,
+                    good: v => v >= 1000, medium: v => v >= 500 && v < 1000, desc: '≥1000 = umjeren' },
+                { label: 'Freezing Level', value: freezingLevel, unit: 'm', score: scores.freezing, weight: 5,
+                    good: v => v !== null && v < 2500, medium: v => v !== null && v >= 2500 && v <= 3500,
+                    desc: '<2500 = visok rizik' },
+                { label: 'Wet Bulb Zero', value: wbZero, unit: 'm', score: scores.wbZero, weight: 5,
+                    good: v => v !== null && v < 2500, medium: v => v !== null && v >= 2500 && v <= 3000,
+                    desc: '<2500 = vrlo povoljno' },
+                { label: 'LI (Lifted Index)', value: li, unit: '', score: scores.li, weight: 4,
+                    good: v => v !== null && v <= -4, medium: v => v !== null && v > -4 && v <= -2,
+                    desc: '≤ -4 = jaka konvekcija' },
+                { label: 'Total Totals (TT)', value: tt, unit: '', score: scores.tt, weight: 4,
+                    good: v => v !== null && v >= 50, medium: v => v !== null && v >= 45 && v < 50,
+                    desc: '≥50 = jaka nestabilnost' },
+                { label: 'SWEAT', value: sweat, unit: '', score: scores.sweat, weight: 4,
+                    good: v => v !== null && v >= 300, medium: v => v !== null && v >= 200 && v < 300,
+                    desc: '≥300 = povoljno' },
+                { label: 'K Index', value: kIndex, unit: '', score: scores.kIndex, weight: 3,
+                    good: v => v !== null && v >= 30, medium: v => v !== null && v >= 20 && v < 30,
+                    desc: '≥30 = nestabilno' },
+                { label: 'LCL visina', value: lcl, unit: 'm', score: scores.lcl, weight: 3,
+                    good: v => v !== null && v <= 1200, medium: v => v !== null && v > 1200 && v <= 1800,
+                    desc: '≤1200 = nizak' },
+                { label: 'LFC (Level of Free Conv.)', value: lfc, unit: 'm', score: scores.lfc, weight: 3,
+                    good: v => v !== null && v <= 1500, medium: v => v !== null && v > 1500 && v <= 2200,
+                    desc: 'niži = lakši uspon' },
+                { label: 'EL (Equilibrium Level)', value: el, unit: 'm', score: scores.el, weight: 4,
+                    good: v => v !== null && v >= 8000, medium: v => v !== null && v >= 6000 && v < 8000,
+                    desc: 'viši EL = jači uzlazni tok' },
+                { label: 'Bulk Shear 0–6 km', value: shear06, unit: 'm/s', score: scores.shear, weight: 5,
+                    good: v => v >= 20, medium: v => v >= 15 && v < 20, desc: '≥20 = odličan' },
+                { label: 'Bulk Shear 0–3 km', value: shear03, unit: 'm/s', score: scores.shear03, weight: 4,
+                    good: v => v >= 12, medium: v => v >= 8 && v < 12, desc: '≥12 = povoljno' },
+                { label: 'SRH 0–3 km (desni)', value: srh03R, unit: 'm²/s²', score: scores.srh, weight: 4,
+                    good: v => v >= 150, medium: v => v >= 80 && v < 150, desc: '≥150 = povoljno' },
+                { label: 'DCAPE', value: dcape, unit: 'J/kg', score: scores.dcape, weight: 2,
+                    good: v => v !== null && v >= 700, medium: v => v !== null && v >= 400 && v < 700,
+                    desc: '≥700 = jak downburst' },
+                { label: 'PWAT', value: pwat, unit: 'mm', score: scores.pwat, weight: 2,
+                    good: v => v !== null && v >= 30, medium: v => v !== null && v >= 20 && v < 30,
+                    desc: '≥30 mm = vlažan profil' },
+                { label: 'CIN', value: cin, unit: 'J/kg', score: scores.cin, weight: 3,
+                    good: v => v >= -50, medium: v => v < -50 && v >= -150, desc: 'manje negativno = bolje' }
+            ];
+
+            // Приказујемо параметре са звездицама
+            for (let p of params) {
+                if (p.value === null || p.value === undefined) continue;
+                const val = p.value;
+                const card = document.createElement('div');
+                card.className = 'param-card';
+                let status = 'neutral';
+                if (p.good && p.good(val)) status = 'good';
+                else if (p.medium && p.medium(val)) status = 'medium';
+                else if (p.good && !p.good(val) && !p.medium) status = 'bad';
+                else if (p.medium && !p.good(val) && !p.medium(val)) status = 'bad';
+                card.classList.add(status);
+
+                let displayVal = (typeof val === 'number') ? (Number.isInteger(val) ? val.toFixed(0) : val.toFixed(1)) : '--';
+                if (p.label.includes('PWAT')) displayVal = val.toFixed(1);
+                const dot = statusDot(val, p.good, p.medium);
+                // Звездице
+                const stars = '★'.repeat(p.weight) + '☆'.repeat(5 - p.weight);
+                card.innerHTML = `
+                    <div class="label">${dot} ${p.label} <span style="float:right; color:#f9ca7f; font-size:10px;">${stars}</span></div>
+                    <div class="value">${displayVal} ${p.unit}</div>
+                    <div class="threshold">${p.desc} ${scoreDisplay(p.score)}</div>
+                `;
+                grid.appendChild(card);
+            }
+
+            // Bunkers
+            if (bunkers.right) {
+                const r = uvToWind(bunkers.right.u, bunkers.right.v);
+                const l = uvToWind(bunkers.left.u, bunkers.left.v);
+                document.getElementById('rightDir').textContent = `${r.dir.toFixed(0)}°`;
+                document.getElementById('rightSpeed').textContent = `${r.speed.toFixed(1)} m/s`;
+                document.getElementById('leftDir').textContent = `${l.dir.toFixed(0)}°`;
+                document.getElementById('leftSpeed').textContent = `${l.speed.toFixed(1)} m/s`;
+            } else {
+                document.getElementById('rightDir').textContent = '--';
+                document.getElementById('rightSpeed').textContent = '--';
+                document.getElementById('leftDir').textContent = '--';
+                document.getElementById('leftSpeed').textContent = '--';
+            }
+
+            // SCP
+            const scpDisplay = document.getElementById('scpDisplay');
+            const scpInterp = document.getElementById('scpInterpretation');
+            if (scp > 0) {
+                scpDisplay.textContent = scp.toFixed(2);
+                if (scp >= 1) { scpDisplay.style.color = '#6fcf97'; scpInterp.textContent = 'Повољан потенцијал за суперћелије!'; }
+                else if (scp >= 0.5) { scpDisplay.style.color = '#f9ca7f'; scpInterp.textContent = 'Маргинални потенцијал за суперћелије'; }
+                else { scpDisplay.style.color = '#f28b82'; scpInterp.textContent = 'Низак потенцијал за суперћелије'; }
+            } else {
+                scpDisplay.textContent = '0.00';
+                scpDisplay.style.color = '#f28b82';
+                scpInterp.textContent = 'Нема назнака за суперћелије';
+            }
+
+            // HAIL
+            const hailPercent = document.getElementById('hailPercent');
+            const hailDesc = document.getElementById('hailDesc');
+            const hailDetail = document.getElementById('hailDetail');
+
+            let percentColor = '#f28b82';
+            let descText = 'Низак ризик од града';
+            if (hailProb >= 70) { percentColor = '#6fcf97'; descText = 'Висок ризик од града – могуће велики град!'; }
+            else if (hailProb >= 40) { percentColor = '#f9ca7f'; descText = 'Умерен ризик од града'; }
+            else if (hailProb >= 20) { percentColor = '#f9ca7f'; descText = 'Маргиналан ризик од града'; }
+            else { percentColor = '#f28b82'; descText = 'Низак ризик од града'; }
+
+            hailPercent.textContent = `${Math.round(hailProb)}%`;
+            hailPercent.style.color = percentColor;
+            hailDesc.textContent = descText;
+
+            let detailParts = [];
+            if (freezingLevel !== null) detailParts.push(`0°C: ${freezingLevel.toFixed(0)} m`);
+            if (wbZero !== null) detailParts.push(`WB0: ${wbZero.toFixed(0)} m`);
+            if (el !== null) detailParts.push(`EL: ${el.toFixed(0)} m`);
+            if (lfc !== null) detailParts.push(`LFC: ${lfc.toFixed(0)} m`);
+            if (meanRH03 !== null) detailParts.push(`RH₀₋₃: ${Math.round(meanRH03)}%`);
+            hailDetail.textContent = detailParts.join(' | ');
+
+            resultsDiv.style.display = 'block';
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        } catch (err) {
+            errorDiv.textContent = '⚠️ Грешка при анализи: ' + err.message;
+            errorDiv.style.display = 'block';
+            console.error(err);
+        }
+    }
+
+    function loadFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('soundingData').value = e.target.result;
+            analyze();
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const textarea = document.getElementById('soundingData');
+        if (textarea.value.trim().length > 0) {
+            setTimeout(analyze, 300);
+        }
+    });
+</script>
+</body>
+</html>
